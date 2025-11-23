@@ -17,7 +17,7 @@ export const Canvas: Component = () => {
   const [dragOffset, setDragOffset] = createSignal<Position>({ x: 0, y: 0 });
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
 
-  const getSvgPoint = (e: MouseEvent): Position => {
+  const getSvgPoint = (e: PointerEvent | MouseEvent): Position => {
     if (!svgRef) return { x: 0, y: 0 };
     const rect = svgRef.getBoundingClientRect();
     return {
@@ -82,7 +82,7 @@ export const Canvas: Component = () => {
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handlePointerMove = (e: PointerEvent) => {
     const point = getSvgPoint(e);
     setMousePos(point);
 
@@ -95,12 +95,12 @@ export const Canvas: Component = () => {
     }
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     setIsDragging(false);
     setDragNodeId(null);
   };
 
-  const handleCanvasClick = (e: MouseEvent) => {
+  const handleCanvasClick = (e: PointerEvent | MouseEvent) => {
     if (e.target === svgRef) {
       setSelectedId(null);
       setWireStart(null);
@@ -143,10 +143,12 @@ export const Canvas: Component = () => {
         <svg
           ref={svgRef}
           class="circuit-canvas"
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          onPointerCancel={handlePointerUp}
           onClick={handleCanvasClick}
+          style={{ "touch-action": "none" }}
         >
           {/* Grid pattern */}
           <defs>

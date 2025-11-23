@@ -10,9 +10,11 @@ interface SwitchProps {
 }
 
 export const Switch: Component<SwitchProps> = (props) => {
-  const handleMouseDown = (e: MouseEvent) => {
+  const handlePointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    e.preventDefault();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
 
     props.onStartDrag(props.node.id, {
       x: e.clientX - props.node.position.x,
@@ -20,8 +22,9 @@ export const Switch: Component<SwitchProps> = (props) => {
     });
   };
 
-  const handleToggle = (e: MouseEvent) => {
+  const handleToggle = (e: PointerEvent | MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     circuitStore.toggleSwitch(props.node.id);
   };
 
@@ -29,7 +32,7 @@ export const Switch: Component<SwitchProps> = (props) => {
     <g
       transform={`translate(${props.node.position.x}, ${props.node.position.y})`}
       class="circuit-node switch-node"
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
     >
       <rect
         x={0}
@@ -65,20 +68,32 @@ export const Switch: Component<SwitchProps> = (props) => {
         {props.node.state ? 'ON' : 'OFF'}
       </text>
       {/* Output port */}
-      <circle
-        cx={props.node.width}
-        cy={props.node.height / 2}
-        r={6}
-        fill={props.node.state ? '#4ade80' : '#6b7280'}
-        stroke="#fff"
-        stroke-width={2}
-        class="port output-port"
-        style={{ cursor: 'crosshair' }}
-        onClick={(e) => {
-          e.stopPropagation();
-          props.onPortClick(props.node.outputPort.id, props.node.id, 'output');
-        }}
-      />
+      <g class="port-group">
+        {/* Invisible touch target */}
+        <circle
+          cx={props.node.width}
+          cy={props.node.height / 2}
+          r={18}
+          fill="transparent"
+          class="port-touch-target"
+          style={{ cursor: 'crosshair' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onPortClick(props.node.outputPort.id, props.node.id, 'output');
+          }}
+        />
+        {/* Visible port */}
+        <circle
+          cx={props.node.width}
+          cy={props.node.height / 2}
+          r={8}
+          fill={props.node.state ? '#4ade80' : '#6b7280'}
+          stroke="#fff"
+          stroke-width={2}
+          class="port output-port"
+          style={{ 'pointer-events': 'none' }}
+        />
+      </g>
     </g>
   );
 };

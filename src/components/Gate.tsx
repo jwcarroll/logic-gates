@@ -31,9 +31,11 @@ function getGateColor(gateType: GateType): string {
 }
 
 export const Gate: Component<GateProps> = (props) => {
-  const handleMouseDown = (e: MouseEvent) => {
+  const handlePointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    e.preventDefault();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
 
     props.onStartDrag(props.node.id, {
       x: e.clientX - props.node.position.x,
@@ -48,7 +50,7 @@ export const Gate: Component<GateProps> = (props) => {
     <g
       transform={`translate(${props.node.position.x}, ${props.node.position.y})`}
       class="circuit-node gate-node"
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
     >
       {/* Gate body */}
       <rect
@@ -77,37 +79,61 @@ export const Gate: Component<GateProps> = (props) => {
       {/* Input ports */}
       <For each={props.node.inputPorts}>
         {(port, index) => (
-          <circle
-            cx={0}
-            cy={spacing() * (index() + 1)}
-            r={6}
-            fill="#6b7280"
-            stroke="#fff"
-            stroke-width={2}
-            class="port input-port"
-            style={{ cursor: 'crosshair' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onPortClick(port.id, props.node.id, 'input');
-            }}
-          />
+          <g class="port-group">
+            {/* Invisible touch target */}
+            <circle
+              cx={0}
+              cy={spacing() * (index() + 1)}
+              r={18}
+              fill="transparent"
+              class="port-touch-target"
+              style={{ cursor: 'crosshair' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onPortClick(port.id, props.node.id, 'input');
+              }}
+            />
+            {/* Visible port */}
+            <circle
+              cx={0}
+              cy={spacing() * (index() + 1)}
+              r={8}
+              fill="#6b7280"
+              stroke="#fff"
+              stroke-width={2}
+              class="port input-port"
+              style={{ 'pointer-events': 'none' }}
+            />
+          </g>
         )}
       </For>
       {/* Output port */}
-      <circle
-        cx={props.node.width}
-        cy={props.node.height / 2}
-        r={6}
-        fill="#6b7280"
-        stroke="#fff"
-        stroke-width={2}
-        class="port output-port"
-        style={{ cursor: 'crosshair' }}
-        onClick={(e) => {
-          e.stopPropagation();
-          props.onPortClick(props.node.outputPort.id, props.node.id, 'output');
-        }}
-      />
+      <g class="port-group">
+        {/* Invisible touch target */}
+        <circle
+          cx={props.node.width}
+          cy={props.node.height / 2}
+          r={18}
+          fill="transparent"
+          class="port-touch-target"
+          style={{ cursor: 'crosshair' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onPortClick(props.node.outputPort.id, props.node.id, 'output');
+          }}
+        />
+        {/* Visible port */}
+        <circle
+          cx={props.node.width}
+          cy={props.node.height / 2}
+          r={8}
+          fill="#6b7280"
+          stroke="#fff"
+          stroke-width={2}
+          class="port output-port"
+          style={{ 'pointer-events': 'none' }}
+        />
+      </g>
       {/* NOT gate bubble */}
       {(props.node.gateType === 'NOT' ||
         props.node.gateType === 'NAND' ||

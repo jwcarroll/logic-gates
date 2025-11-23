@@ -9,9 +9,11 @@ interface LightProps {
 }
 
 export const Light: Component<LightProps> = (props) => {
-  const handleMouseDown = (e: MouseEvent) => {
+  const handlePointerDown = (e: PointerEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
+    e.preventDefault();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
 
     props.onStartDrag(props.node.id, {
       x: e.clientX - props.node.position.x,
@@ -23,23 +25,35 @@ export const Light: Component<LightProps> = (props) => {
     <g
       transform={`translate(${props.node.position.x}, ${props.node.position.y})`}
       class="circuit-node light-node"
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
     >
       {/* Input port */}
-      <circle
-        cx={0}
-        cy={props.node.height / 2}
-        r={6}
-        fill="#6b7280"
-        stroke="#fff"
-        stroke-width={2}
-        class="port input-port"
-        style={{ cursor: 'crosshair' }}
-        onClick={(e) => {
-          e.stopPropagation();
-          props.onPortClick(props.node.inputPort.id, props.node.id, 'input');
-        }}
-      />
+      <g class="port-group">
+        {/* Invisible touch target */}
+        <circle
+          cx={0}
+          cy={props.node.height / 2}
+          r={18}
+          fill="transparent"
+          class="port-touch-target"
+          style={{ cursor: 'crosshair' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onPortClick(props.node.inputPort.id, props.node.id, 'input');
+          }}
+        />
+        {/* Visible port */}
+        <circle
+          cx={0}
+          cy={props.node.height / 2}
+          r={8}
+          fill="#6b7280"
+          stroke="#fff"
+          stroke-width={2}
+          class="port input-port"
+          style={{ 'pointer-events': 'none' }}
+        />
+      </g>
       {/* Light bulb */}
       <circle
         cx={props.node.width / 2}
