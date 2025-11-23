@@ -1,3 +1,4 @@
+import { createSignal } from 'solid-js';
 import type { Component } from 'solid-js';
 import type { GateType } from '../types/circuit';
 
@@ -11,10 +12,22 @@ interface ToolbarProps {
 }
 
 export const Toolbar: Component<ToolbarProps> = (props) => {
+  const [isCollapsed, setIsCollapsed] = createSignal(false);
   const gateTypes: GateType[] = ['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR', 'XNOR'];
 
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed());
+  };
+
   return (
-    <div class="toolbar">
+    <div class={`toolbar ${isCollapsed() ? 'collapsed' : ''}`}>
+      <div class="toolbar-section toolbar-toggle-section">
+        <button class="toolbar-toggle" onClick={toggleCollapse}>
+          <span>{isCollapsed() ? '▼' : '▲'}</span>
+          {isCollapsed() ? 'Show Tools' : 'Hide Tools'}
+        </button>
+      </div>
+
       <div class="toolbar-section">
         <h3>Inputs</h3>
         <button class="toolbar-btn switch-btn" onClick={props.onAddSwitch}>
@@ -61,12 +74,11 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
       <div class="toolbar-section toolbar-help">
         <h3>Help</h3>
         <ul>
-          <li>Click buttons above to add components</li>
+          <li>Tap buttons above to add components</li>
           <li>Drag components to move them</li>
-          <li>Click ports (circles) to connect wires</li>
-          <li>Click switch to toggle ON/OFF</li>
-          <li>Right-click wire to delete</li>
-          <li>Click component + Delete key to remove</li>
+          <li>Tap ports (circles) to connect wires</li>
+          <li>Tap switch to toggle ON/OFF</li>
+          <li>Select component + Delete to remove</li>
         </ul>
       </div>
     </div>
