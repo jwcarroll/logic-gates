@@ -37,9 +37,10 @@ export const Gate: Component<GateProps> = (props) => {
     e.preventDefault();
     (e.target as Element).setPointerCapture?.(e.pointerId);
 
+    // Pass client position - Canvas will calculate offset accounting for pan/zoom
     props.onStartDrag(props.node.id, {
-      x: e.clientX - props.node.position.x,
-      y: e.clientY - props.node.position.y,
+      x: e.clientX,
+      y: e.clientY,
     });
   };
 
