@@ -1,0 +1,173 @@
+{
+  "version": "1.0",
+  "circuit": {
+    "nodes": [
+      {
+        "id": "switch-a",
+        "type": "switch",
+        "position": { "x": 50, "y": 100 },
+        "width": 60,
+        "height": 40,
+        "state": false,
+        "outputPort": {
+          "id": "port-switch-a-out",
+          "nodeId": "switch-a",
+          "type": "output",
+          "index": 0,
+          "position": { "x": 0, "y": 0 }
+        }
+      },
+      {
+        "id": "switch-b",
+        "type": "switch",
+        "position": { "x": 50, "y": 200 },
+        "width": 60,
+        "height": 40,
+        "state": false,
+        "outputPort": {
+          "id": "port-switch-b-out",
+          "nodeId": "switch-b",
+          "type": "output",
+          "index": 0,
+          "position": { "x": 0, "y": 0 }
+        }
+      },
+      {
+        "id": "gate-xor",
+        "type": "gate",
+        "gateType": "XOR",
+        "position": { "x": 200, "y": 80 },
+        "width": 80,
+        "height": 60,
+        "inputPorts": [
+          {
+            "id": "port-xor-in-0",
+            "nodeId": "gate-xor",
+            "type": "input",
+            "index": 0,
+            "position": { "x": 0, "y": 0 }
+          },
+          {
+            "id": "port-xor-in-1",
+            "nodeId": "gate-xor",
+            "type": "input",
+            "index": 1,
+            "position": { "x": 0, "y": 0 }
+          }
+        ],
+        "outputPort": {
+          "id": "port-xor-out",
+          "nodeId": "gate-xor",
+          "type": "output",
+          "index": 0,
+          "position": { "x": 0, "y": 0 }
+        }
+      },
+      {
+        "id": "gate-and",
+        "type": "gate",
+        "gateType": "AND",
+        "position": { "x": 200, "y": 180 },
+        "width": 80,
+        "height": 60,
+        "inputPorts": [
+          {
+            "id": "port-and-in-0",
+            "nodeId": "gate-and",
+            "type": "input",
+            "index": 0,
+            "position": { "x": 0, "y": 0 }
+          },
+          {
+            "id": "port-and-in-1",
+            "nodeId": "gate-and",
+            "type": "input",
+            "index": 1,
+            "position": { "x": 0, "y": 0 }
+          }
+        ],
+        "outputPort": {
+          "id": "port-and-out",
+          "nodeId": "gate-and",
+          "type": "output",
+          "index": 0,
+          "position": { "x": 0, "y": 0 }
+        }
+      },
+      {
+        "id": "light-sum",
+        "type": "light",
+        "position": { "x": 360, "y": 90 },
+        "width": 40,
+        "height": 40,
+        "state": false,
+        "inputPort": {
+          "id": "port-light-sum-in",
+          "nodeId": "light-sum",
+          "type": "input",
+          "index": 0,
+          "position": { "x": 0, "y": 0 }
+        }
+      },
+      {
+        "id": "light-carry",
+        "type": "light",
+        "position": { "x": 360, "y": 190 },
+        "width": 40,
+        "height": 40,
+        "state": false,
+        "inputPort": {
+          "id": "port-light-carry-in",
+          "nodeId": "light-carry",
+          "type": "input",
+          "index": 0,
+          "position": { "x": 0, "y": 0 }
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "wire-a-to-xor",
+        "fromPortId": "port-switch-a-out",
+        "toPortId": "port-xor-in-0",
+        "fromNodeId": "switch-a",
+        "toNodeId": "gate-xor"
+      },
+      {
+        "id": "wire-b-to-xor",
+        "fromPortId": "port-switch-b-out",
+        "toPortId": "port-xor-in-1",
+        "fromNodeId": "switch-b",
+        "toNodeId": "gate-xor"
+      },
+      {
+        "id": "wire-a-to-and",
+        "fromPortId": "port-switch-a-out",
+        "toPortId": "port-and-in-0",
+        "fromNodeId": "switch-a",
+        "toNodeId": "gate-and"
+      },
+      {
+        "id": "wire-b-to-and",
+        "fromPortId": "port-switch-b-out",
+        "toPortId": "port-and-in-1",
+        "fromNodeId": "switch-b",
+        "toNodeId": "gate-and"
+      },
+      {
+        "id": "wire-xor-to-sum",
+        "fromPortId": "port-xor-out",
+        "toPortId": "port-light-sum-in",
+        "fromNodeId": "gate-xor",
+        "toNodeId": "light-sum"
+      },
+      {
+        "id": "wire-and-to-carry",
+        "fromPortId": "port-and-out",
+        "toPortId": "port-light-carry-in",
+        "fromNodeId": "gate-and",
+        "toNodeId": "light-carry"
+      }
+    ]
+  }
+}
