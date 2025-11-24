@@ -5,6 +5,7 @@ import { circuitStore, createSwitch, createLight, createGate } from '../store/ci
 import { Switch } from './Switch';
 import { Light } from './Light';
 import { Gate } from './Gate';
+import { Group } from './Group';
 import { Wire, WirePreview } from './Wire';
 import { Toolbar } from './Toolbar';
 
@@ -21,7 +22,7 @@ export const Canvas: Component = () => {
   const [isDragging, setIsDragging] = createSignal(false);
   const [dragNodeId, setDragNodeId] = createSignal<string | null>(null);
   const [dragOffset, setDragOffset] = createSignal<Position>({ x: 0, y: 0 });
-  const [selectedId, setSelectedId] = createSignal<string | null>(null);
+  const [dragStartPosition, setDragStartPosition] = createSignal<Position | null>(null);
 
   // Touch gesture state for pan/zoom
   const [pan, setPan] = createSignal<Position>({ x: 0, y: 0 });
@@ -90,15 +91,69 @@ export const Canvas: Component = () => {
   const handleClear = () => {
     if (confirm('Are you sure you want to clear all components?')) {
       circuitStore.clearCircuit();
-      setSelectedId(null);
+      circuitStore.clearSelection();
     }
   };
 
   const handleDeleteSelected = () => {
-    const id = selectedId();
-    if (id) {
-      circuitStore.removeNode(id);
-      setSelectedId(null);
+    const ids = circuitStore.selectedNodeIds.ids;
+    if (ids.length > 0) {
+      ids.forEach(id => circuitStore.removeNode(id));
+      circuitStore.clearSelection();
+    }
+  };
+
+  const handleCreateGroup = () => {
+    const ids = circuitStore.selectedNodeIds.ids;
+    if (ids.length >= 2) {
+      const label = prompt('Enter group name:', 'Group');
+      if (label !== null) {
+        circuitStore.createGroupFromSelected(label || 'Group');
+      }
+    } else {
+      alert('Please select at least 2 components to group');
+    }
+  };
+
+  const handleUngroup = () => {
+    const ids = circuitStore.selectedNodeIds.ids;
+    if (ids.length === 1) {
+      const node = circuitStore.circuit.nodes.find(n => n.id === ids[0]);
+      if (node?.type === 'group') {
+        circuitStore.ungroupNode(ids[0]);
+      } else {
+        alert('Please select a group to ungroup');
+      }
+    } else {
+      alert('Please select exactly one group to ungroup');
+    }
+  };
+
+  const handleCloneGroup = () => {
+    const ids = circuitStore.selectedNodeIds.ids;
+    if (ids.length === 1) {
+      const node = circuitStore.circuit.nodes.find(n => n.id === ids[0]);
+      if (node?.type === 'group') {
+        circuitStore.cloneGroup(ids[0]);
+      } else {
+        alert('Please select a group to clone');
+      }
+    } else {
+      alert('Please select exactly one group to clone');
+    }
+  };
+
+  const handleToggleCollapse = () => {
+    const ids = circuitStore.selectedNodeIds.ids;
+    if (ids.length === 1) {
+      const node = circuitStore.circuit.nodes.find(n => n.id === ids[0]);
+      if (node?.type === 'group') {
+        circuitStore.toggleGroupCollapse(ids[0]);
+      } else {
+        alert('Please select a group to collapse/expand');
+      }
+    } else {
+      alert('Please select exactly one group to collapse/expand');
     }
   };
 
@@ -135,7 +190,7 @@ export const Canvas: Component = () => {
     reader.readAsText(file);
   };
 
-  const handleStartDrag = (nodeId: string, clientPos: Position) => {
+  const handleStartDrag = (nodeId: string, clientPos: Position, isMultiSelect: boolean = false) => {
     // Don't start drag if we're in a multi-touch gesture
     if (activePointers().length >= 2) return;
 
@@ -154,7 +209,18 @@ export const Canvas: Component = () => {
     setIsDragging(true);
     setDragNodeId(nodeId);
     setDragOffset(offset);
-    setSelectedId(nodeId);
+    setDragStartPosition(node.position);
+
+    // Handle multi-selection with Ctrl/Cmd key
+    if (isMultiSelect) {
+      circuitStore.toggleSelection(nodeId);
+    } else {
+      // If clicking on an already selected node, keep the current selection
+      // Otherwise, select only this node
+      if (!circuitStore.selectedNodeIds.ids.includes(nodeId)) {
+        circuitStore.setSelection([nodeId]);
+      }
+    }
   };
 
   const handlePortClick = (portId: string, nodeId: string, type: 'input' | 'output') => {
@@ -232,11 +298,24 @@ export const Canvas: Component = () => {
       const offset = dragOffset();
       const currentZoom = zoom();
       const currentPan = pan();
-      // newPos = (clientPos - offset - pan) / zoom
-      circuitStore.updateNodePosition(dragNodeId()!, {
+      const newPos = {
         x: (e.clientX - offset.x - currentPan.x) / currentZoom,
         y: (e.clientY - offset.y - currentPan.y) / currentZoom,
-      });
+      };
+
+      const draggedNode = circuitStore.circuit.nodes.find(n => n.id === dragNodeId()!);
+      if (draggedNode?.type === 'group') {
+        // When dragging a group, move all child nodes
+        const startPos = dragStartPosition();
+        if (startPos) {
+          const deltaX = newPos.x - startPos.x;
+          const deltaY = newPos.y - startPos.y;
+          circuitStore.updateGroupPositions(dragNodeId()!, deltaX, deltaY);
+        }
+      }
+
+      // Update the dragged node position
+      circuitStore.updateNodePosition(dragNodeId()!, newPos);
     }
   };
 
@@ -258,22 +337,22 @@ export const Canvas: Component = () => {
 
   const handleCanvasClick = (e: PointerEvent | MouseEvent) => {
     if (e.target === svgRef) {
-      setSelectedId(null);
+      circuitStore.clearSelection();
       setWireStart(null);
     }
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      const id = selectedId();
-      if (id) {
-        circuitStore.removeNode(id);
-        setSelectedId(null);
+      const ids = circuitStore.selectedNodeIds.ids;
+      if (ids.length > 0) {
+        ids.forEach(id => circuitStore.removeNode(id));
+        circuitStore.clearSelection();
       }
     }
     if (e.key === 'Escape') {
       setWireStart(null);
-      setSelectedId(null);
+      circuitStore.clearSelection();
     }
   };
 
@@ -293,9 +372,13 @@ export const Canvas: Component = () => {
         onAddGate={handleAddGate}
         onClear={handleClear}
         onDeleteSelected={handleDeleteSelected}
+        onCreateGroup={handleCreateGroup}
+        onUngroup={handleUngroup}
+        onCloneGroup={handleCloneGroup}
+        onToggleCollapse={handleToggleCollapse}
         onExport={handleExport}
         onImport={handleImport}
-        hasSelection={selectedId() !== null}
+        hasSelection={circuitStore.selectedNodeIds.ids.length > 0}
       />
       <div class="canvas-container">
         <svg
@@ -340,13 +423,15 @@ export const Canvas: Component = () => {
             {/* Nodes */}
             <For each={circuitStore.circuit.nodes}>
               {(node) => {
+                const isSelected = circuitStore.selectedNodeIds.ids.includes(node.id);
+
                 if (node.type === 'switch') {
                   return (
                     <Switch
                       node={node}
                       onStartDrag={handleStartDrag}
                       onPortClick={handlePortClick}
-                      isSelected={selectedId() === node.id}
+                      isSelected={isSelected}
                     />
                   );
                 }
@@ -356,7 +441,7 @@ export const Canvas: Component = () => {
                       node={node}
                       onStartDrag={handleStartDrag}
                       onPortClick={handlePortClick}
-                      isSelected={selectedId() === node.id}
+                      isSelected={isSelected}
                     />
                   );
                 }
@@ -366,7 +451,17 @@ export const Canvas: Component = () => {
                       node={node}
                       onStartDrag={handleStartDrag}
                       onPortClick={handlePortClick}
-                      isSelected={selectedId() === node.id}
+                      isSelected={isSelected}
+                    />
+                  );
+                }
+                if (node.type === 'group') {
+                  return (
+                    <Group
+                      node={node}
+                      onStartDrag={handleStartDrag}
+                      onPortClick={handlePortClick}
+                      isSelected={isSelected}
                     />
                   );
                 }

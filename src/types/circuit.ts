@@ -39,7 +39,16 @@ export interface GateNode extends BaseNode {
   outputPort: Port;
 }
 
-export type CircuitNode = SwitchNode | LightNode | GateNode;
+export interface GroupNode extends BaseNode {
+  type: 'group';
+  label: string;
+  childNodeIds: string[];
+  collapsed: boolean;
+  inputPorts: Port[];
+  outputPorts: Port[];
+}
+
+export type CircuitNode = SwitchNode | LightNode | GateNode | GroupNode;
 
 export interface Wire {
   id: string;

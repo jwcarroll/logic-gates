@@ -7,6 +7,7 @@ import type {
   SwitchNode,
   LightNode,
   GateNode,
+  GroupNode,
   GateType,
   Port,
   DragState,
@@ -121,7 +122,7 @@ function createCircuitStore() {
     zoom: 1,
   });
 
-  const [selectedNodeId, setSelectedNodeId] = createStore<{ id: string | null }>({ id: null });
+  const [selectedNodeIds, setSelectedNodeIds] = createStore<{ ids: string[] }>({ ids: [] });
 
   function addNode(node: CircuitNode) {
     setCircuit('nodes', (nodes) => [...nodes, node]);
@@ -205,6 +206,12 @@ function createCircuitStore() {
         const inputPort = node.inputPorts.find((p) => p.id === portId);
         if (inputPort) return inputPort;
       }
+      if (node.type === 'group') {
+        const inputPort = node.inputPorts.find((p) => p.id === portId);
+        if (inputPort) return inputPort;
+        const outputPort = node.outputPorts.find((p) => p.id === portId);
+        if (outputPort) return outputPort;
+      }
     }
     return null;
   }
@@ -238,6 +245,24 @@ function createCircuitStore() {
         const spacing = node.height / (inputCount + 1);
         return {
           x: node.position.x,
+          y: node.position.y + spacing * (port.index + 1),
+        };
+      }
+    }
+
+    if (node.type === 'group') {
+      if (port.type === 'input') {
+        const inputCount = node.inputPorts.length;
+        const spacing = inputCount > 1 ? node.height / (inputCount + 1) : node.height / 2;
+        return {
+          x: node.position.x,
+          y: node.position.y + spacing * (port.index + 1),
+        };
+      } else {
+        const outputCount = node.outputPorts.length;
+        const spacing = outputCount > 1 ? node.height / (outputCount + 1) : node.height / 2;
+        return {
+          x: node.position.x + node.width,
           y: node.position.y + spacing * (port.index + 1),
         };
       }
@@ -366,6 +391,9 @@ function createCircuitStore() {
         if (node.type === 'gate' && (!node.gateType || !node.inputPorts || !node.outputPort)) {
           return { success: false, error: 'Invalid gate node' };
         }
+        if (node.type === 'group' && (!node.childNodeIds || !node.inputPorts || !node.outputPorts)) {
+          return { success: false, error: 'Invalid group node' };
+        }
       }
 
       // Basic validation of wires
@@ -385,16 +413,315 @@ function createCircuitStore() {
     }
   }
 
+  // Selection management
+  function toggleSelection(nodeId: string) {
+    setSelectedNodeIds(
+      produce((state) => {
+        const index = state.ids.indexOf(nodeId);
+        if (index >= 0) {
+          state.ids.splice(index, 1);
+        } else {
+          state.ids.push(nodeId);
+        }
+      })
+    );
+  }
+
+  function setSelection(nodeIds: string[]) {
+    setSelectedNodeIds({ ids: nodeIds });
+  }
+
+  function clearSelection() {
+    setSelectedNodeIds({ ids: [] });
+  }
+
+  // Group operations
+  function createGroupFromSelected(label: string = 'Group'): string | null {
+    const selectedIds = selectedNodeIds.ids;
+    if (selectedIds.length < 2) return null;
+
+    // Get all selected nodes
+    const selectedNodes = circuit.nodes.filter((n) => selectedIds.includes(n.id));
+
+    // Calculate bounding box
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const node of selectedNodes) {
+      minX = Math.min(minX, node.position.x);
+      minY = Math.min(minY, node.position.y);
+      maxX = Math.max(maxX, node.position.x + node.width);
+      maxY = Math.max(maxY, node.position.y + node.height);
+    }
+
+    const padding = 20;
+    const groupPosition = { x: minX - padding, y: minY - padding };
+    const groupWidth = maxX - minX + padding * 2;
+    const groupHeight = maxY - minY + padding * 2;
+
+    // Find external connections (wires connecting to nodes outside the group)
+    const externalInputs: Map<string, Port> = new Map();
+    const externalOutputs: Map<string, Port> = new Map();
+
+    for (const wire of circuit.wires) {
+      const fromInGroup = selectedIds.includes(wire.fromNodeId);
+      const toInGroup = selectedIds.includes(wire.toNodeId);
+
+      if (fromInGroup && !toInGroup) {
+        // Output from group to external node
+        const fromPort = findPort(wire.fromPortId);
+        if (fromPort) {
+          externalOutputs.set(wire.fromPortId, fromPort);
+        }
+      } else if (!fromInGroup && toInGroup) {
+        // Input from external node to group
+        const toPort = findPort(wire.toPortId);
+        if (toPort) {
+          externalInputs.set(wire.toPortId, toPort);
+        }
+      }
+    }
+
+    // Create group node with external ports
+    const groupId = generateId();
+    const inputPorts: Port[] = Array.from(externalInputs.values()).map((_port, index) => ({
+      id: generateId(),
+      nodeId: groupId,
+      type: 'input' as const,
+      index,
+      position: { x: 0, y: 0 },
+    }));
+
+    const outputPorts: Port[] = Array.from(externalOutputs.values()).map((_port, index) => ({
+      id: generateId(),
+      nodeId: groupId,
+      type: 'output' as const,
+      index,
+      position: { x: 0, y: 0 },
+    }));
+
+    const group: GroupNode = {
+      id: groupId,
+      type: 'group',
+      label,
+      position: groupPosition,
+      width: groupWidth,
+      height: groupHeight,
+      childNodeIds: selectedIds,
+      collapsed: false,
+      inputPorts,
+      outputPorts,
+    };
+
+    // Update wires to connect to group ports instead of internal nodes
+    setCircuit(
+      produce((c) => {
+        // Add group node
+        c.nodes.push(group);
+
+        // Remap external wires to group ports
+        const inputPortMapping = new Map<string, string>();
+        const outputPortMapping = new Map<string, string>();
+
+        Array.from(externalInputs.keys()).forEach((oldPortId, index) => {
+          inputPortMapping.set(oldPortId, inputPorts[index].id);
+        });
+
+        Array.from(externalOutputs.keys()).forEach((oldPortId, index) => {
+          outputPortMapping.set(oldPortId, outputPorts[index].id);
+        });
+
+        for (const wire of c.wires) {
+          if (outputPortMapping.has(wire.fromPortId)) {
+            wire.fromPortId = outputPortMapping.get(wire.fromPortId)!;
+            wire.fromNodeId = groupId;
+          }
+          if (inputPortMapping.has(wire.toPortId)) {
+            wire.toPortId = inputPortMapping.get(wire.toPortId)!;
+            wire.toNodeId = groupId;
+          }
+        }
+      })
+    );
+
+    clearSelection();
+    setSelection([groupId]);
+    return groupId;
+  }
+
+  function ungroupNode(groupId: string) {
+    const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+    if (!group) return;
+
+    setCircuit(
+      produce((c) => {
+        // Collect port mappings (we need to trace which group port maps to which internal port)
+        // For now, we'll remove the group and its external wires
+        // A more sophisticated implementation would preserve the wire connections
+
+        // Remove wires connected to this group
+        c.wires = c.wires.filter((w) => w.fromNodeId !== groupId && w.toNodeId !== groupId);
+
+        // Remove the group node
+        c.nodes = c.nodes.filter((n) => n.id !== groupId);
+      })
+    );
+
+    // Select the ungrouped nodes
+    setSelection(group.childNodeIds);
+  }
+
+  function toggleGroupCollapse(groupId: string) {
+    setCircuit(
+      'nodes',
+      (n) => n.id === groupId && n.type === 'group',
+      'collapsed' as any,
+      (collapsed: boolean) => !collapsed
+    );
+  }
+
+  function cloneGroup(groupId: string): string | null {
+    const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+    if (!group) return null;
+
+    // Create ID mappings for cloned nodes
+    const idMapping = new Map<string, string>();
+    group.childNodeIds.forEach((oldId) => {
+      idMapping.set(oldId, generateId());
+    });
+
+    // Clone child nodes
+    const clonedNodes: CircuitNode[] = [];
+    for (const childId of group.childNodeIds) {
+      const originalNode = circuit.nodes.find((n) => n.id === childId);
+      if (!originalNode) continue;
+
+      const newId = idMapping.get(childId)!;
+      const offset = 50; // Offset cloned group
+
+      if (originalNode.type === 'switch') {
+        const cloned: SwitchNode = {
+          ...originalNode,
+          id: newId,
+          position: { x: originalNode.position.x + offset, y: originalNode.position.y + offset },
+          outputPort: { ...originalNode.outputPort, id: generateId(), nodeId: newId },
+        };
+        clonedNodes.push(cloned);
+      } else if (originalNode.type === 'light') {
+        const cloned: LightNode = {
+          ...originalNode,
+          id: newId,
+          position: { x: originalNode.position.x + offset, y: originalNode.position.y + offset },
+          inputPort: { ...originalNode.inputPort, id: generateId(), nodeId: newId },
+        };
+        clonedNodes.push(cloned);
+      } else if (originalNode.type === 'gate') {
+        const cloned: GateNode = {
+          ...originalNode,
+          id: newId,
+          position: { x: originalNode.position.x + offset, y: originalNode.position.y + offset },
+          inputPorts: originalNode.inputPorts.map((p) => ({ ...p, id: generateId(), nodeId: newId })),
+          outputPort: { ...originalNode.outputPort, id: generateId(), nodeId: newId },
+        };
+        clonedNodes.push(cloned);
+      }
+    }
+
+    // Clone internal wires
+    const clonedWires: Wire[] = [];
+    for (const wire of circuit.wires) {
+      if (group.childNodeIds.includes(wire.fromNodeId) && group.childNodeIds.includes(wire.toNodeId)) {
+        // This is an internal wire
+        const fromNode = clonedNodes.find((n) => n.id === idMapping.get(wire.fromNodeId));
+        const toNode = clonedNodes.find((n) => n.id === idMapping.get(wire.toNodeId));
+
+        if (fromNode && toNode) {
+          let fromPortId = '';
+          let toPortId = '';
+
+          if (fromNode.type === 'switch') {
+            fromPortId = fromNode.outputPort.id;
+          } else if (fromNode.type === 'gate') {
+            fromPortId = fromNode.outputPort.id;
+          }
+
+          if (toNode.type === 'light') {
+            toPortId = toNode.inputPort.id;
+          } else if (toNode.type === 'gate') {
+            const originalToNode = circuit.nodes.find((n) => n.id === wire.toNodeId);
+            if (originalToNode && originalToNode.type === 'gate') {
+              const originalPort = originalToNode.inputPorts.find((p) => p.id === wire.toPortId);
+              if (originalPort && toNode.type === 'gate') {
+                toPortId = toNode.inputPorts[originalPort.index].id;
+              }
+            }
+          }
+
+          if (fromPortId && toPortId) {
+            clonedWires.push({
+              id: generateId(),
+              fromPortId,
+              toPortId,
+              fromNodeId: fromNode.id,
+              toNodeId: toNode.id,
+            });
+          }
+        }
+      }
+    }
+
+    // Create cloned group
+    const newGroupId = generateId();
+    const offset = 50;
+    const clonedGroup: GroupNode = {
+      ...group,
+      id: newGroupId,
+      position: { x: group.position.x + offset, y: group.position.y + offset },
+      childNodeIds: clonedNodes.map((n) => n.id),
+      inputPorts: group.inputPorts.map((p, i) => ({ ...p, id: generateId(), nodeId: newGroupId, index: i })),
+      outputPorts: group.outputPorts.map((p, i) => ({ ...p, id: generateId(), nodeId: newGroupId, index: i })),
+    };
+
+    // Add cloned nodes, wires, and group to circuit
+    setCircuit(
+      produce((c) => {
+        c.nodes.push(...clonedNodes);
+        c.wires.push(...clonedWires);
+        c.nodes.push(clonedGroup);
+      })
+    );
+
+    propagateSignals();
+    setSelection([newGroupId]);
+    return newGroupId;
+  }
+
+  function updateGroupPositions(groupId: string, deltaX: number, deltaY: number) {
+    const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+    if (!group) return;
+
+    setCircuit(
+      produce((c) => {
+        // Update child node positions
+        for (const childId of group.childNodeIds) {
+          const node = c.nodes.find((n) => n.id === childId);
+          if (node) {
+            node.position.x += deltaX;
+            node.position.y += deltaY;
+          }
+        }
+      })
+    );
+  }
+
   return {
     circuit,
     dragState,
     wireDrawState,
     canvasState,
-    selectedNodeId,
+    selectedNodeIds,
     setDragState,
     setWireDrawState,
     setCanvasState,
-    setSelectedNodeId,
+    setSelectedNodeIds,
     addNode,
     removeNode,
     updateNodePosition,
@@ -408,6 +735,14 @@ function createCircuitStore() {
     clearCircuit,
     exportCircuit,
     importCircuit,
+    toggleSelection,
+    setSelection,
+    clearSelection,
+    createGroupFromSelected,
+    ungroupNode,
+    toggleGroupCollapse,
+    cloneGroup,
+    updateGroupPositions,
   };
 }
 
