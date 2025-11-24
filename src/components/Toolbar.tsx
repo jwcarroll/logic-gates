@@ -8,6 +8,10 @@ interface ToolbarProps {
   onAddGate: (gateType: GateType) => void;
   onClear: () => void;
   onDeleteSelected: () => void;
+  onCreateGroup: () => void;
+  onUngroup: () => void;
+  onCloneGroup: () => void;
+  onToggleCollapse: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
   hasSelection: boolean;
@@ -76,6 +80,26 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
       </div>
 
       <div class="toolbar-section">
+        <h3>Groups</h3>
+        <button class="toolbar-btn group-btn" onClick={props.onCreateGroup}>
+          <span class="btn-icon">📦</span>
+          Group
+        </button>
+        <button class="toolbar-btn ungroup-btn" onClick={props.onUngroup}>
+          <span class="btn-icon">📤</span>
+          Ungroup
+        </button>
+        <button class="toolbar-btn clone-btn" onClick={props.onCloneGroup}>
+          <span class="btn-icon">📋</span>
+          Clone
+        </button>
+        <button class="toolbar-btn collapse-btn" onClick={props.onToggleCollapse}>
+          <span class="btn-icon">🔽</span>
+          Collapse/Expand
+        </button>
+      </div>
+
+      <div class="toolbar-section">
         <h3>File</h3>
         <button class="toolbar-btn export-btn" onClick={props.onExport}>
           <span class="btn-icon">💾</span>
@@ -115,6 +139,9 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
           <li>Tap ports (circles) to connect wires</li>
           <li>Tap switch to toggle ON/OFF</li>
           <li>Select component + Delete to remove</li>
+          <li>Ctrl/Cmd+Click to multi-select</li>
+          <li>Select 2+ components and Group them</li>
+          <li>Double-click group to collapse/expand</li>
         </ul>
       </div>
     </div>

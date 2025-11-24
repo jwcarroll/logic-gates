@@ -4,7 +4,7 @@ import type { GateNode, Position, GateType } from '../types/circuit';
 
 interface GateProps {
   node: GateNode;
-  onStartDrag: (nodeId: string, offset: Position) => void;
+  onStartDrag: (nodeId: string, offset: Position, isMultiSelect?: boolean) => void;
   onPortClick: (portId: string, nodeId: string, type: 'input' | 'output') => void;
   isSelected: boolean;
 }
@@ -37,11 +37,14 @@ export const Gate: Component<GateProps> = (props) => {
     e.preventDefault();
     (e.target as Element).setPointerCapture?.(e.pointerId);
 
+    // Check for Ctrl (Windows/Linux) or Meta (Mac) key for multi-selection
+    const isMultiSelect = e.ctrlKey || e.metaKey;
+
     // Pass client position - Canvas will calculate offset accounting for pan/zoom
     props.onStartDrag(props.node.id, {
       x: e.clientX,
       y: e.clientY,
-    });
+    }, isMultiSelect);
   };
 
   const inputCount = () => props.node.inputPorts.length;
