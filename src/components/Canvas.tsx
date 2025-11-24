@@ -102,6 +102,39 @@ export const Canvas: Component = () => {
     }
   };
 
+  const handleExport = () => {
+    try {
+      const jsonData = circuitStore.exportCircuit();
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `logic-circuit-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Failed to export circuit: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  const handleImport = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const result = circuitStore.importCircuit(content);
+        if (!result.success) {
+          alert('Failed to import circuit: ' + result.error);
+        }
+      } catch (error) {
+        alert('Failed to read file: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleStartDrag = (nodeId: string, clientPos: Position) => {
     // Don't start drag if we're in a multi-touch gesture
     if (activePointers().length >= 2) return;
@@ -260,6 +293,8 @@ export const Canvas: Component = () => {
         onAddGate={handleAddGate}
         onClear={handleClear}
         onDeleteSelected={handleDeleteSelected}
+        onExport={handleExport}
+        onImport={handleImport}
         hasSelection={selectedId() !== null}
       />
       <div class="canvas-container">
