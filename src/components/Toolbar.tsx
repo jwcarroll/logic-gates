@@ -8,15 +8,32 @@ interface ToolbarProps {
   onAddGate: (gateType: GateType) => void;
   onClear: () => void;
   onDeleteSelected: () => void;
+  onExport: () => void;
+  onImport: (file: File) => void;
   hasSelection: boolean;
 }
 
 export const Toolbar: Component<ToolbarProps> = (props) => {
   const [isCollapsed, setIsCollapsed] = createSignal(false);
   const gateTypes: GateType[] = ['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR', 'XNOR'];
+  let fileInputRef: HTMLInputElement | undefined;
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed());
+  };
+
+  const handleImportClick = () => {
+    fileInputRef?.click();
+  };
+
+  const handleFileChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) {
+      props.onImport(file);
+      // Reset input so same file can be imported again
+      target.value = '';
+    }
   };
 
   return (
@@ -56,6 +73,25 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
           <span class="btn-icon">💡</span>
           Light
         </button>
+      </div>
+
+      <div class="toolbar-section">
+        <h3>File</h3>
+        <button class="toolbar-btn export-btn" onClick={props.onExport}>
+          <span class="btn-icon">💾</span>
+          Export
+        </button>
+        <button class="toolbar-btn import-btn" onClick={handleImportClick}>
+          <span class="btn-icon">📂</span>
+          Import
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,.logic"
+          style="display: none"
+          onChange={handleFileChange}
+        />
       </div>
 
       <div class="toolbar-section toolbar-actions">

@@ -332,6 +332,59 @@ function createCircuitStore() {
     setCircuit({ nodes: [], wires: [] });
   }
 
+  function exportCircuit(): string {
+    const exportData = {
+      version: '1.0',
+      circuit: {
+        nodes: circuit.nodes,
+        wires: circuit.wires,
+      },
+    };
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  function importCircuit(jsonString: string): { success: boolean; error?: string } {
+    try {
+      const data = JSON.parse(jsonString);
+
+      // Validate structure
+      if (!data.circuit || !Array.isArray(data.circuit.nodes) || !Array.isArray(data.circuit.wires)) {
+        return { success: false, error: 'Invalid circuit data structure' };
+      }
+
+      // Basic validation of nodes
+      for (const node of data.circuit.nodes) {
+        if (!node.id || !node.type || !node.position) {
+          return { success: false, error: 'Invalid node data' };
+        }
+        if (node.type === 'switch' && !node.outputPort) {
+          return { success: false, error: 'Invalid switch node' };
+        }
+        if (node.type === 'light' && !node.inputPort) {
+          return { success: false, error: 'Invalid light node' };
+        }
+        if (node.type === 'gate' && (!node.gateType || !node.inputPorts || !node.outputPort)) {
+          return { success: false, error: 'Invalid gate node' };
+        }
+      }
+
+      // Basic validation of wires
+      for (const wire of data.circuit.wires) {
+        if (!wire.id || !wire.fromPortId || !wire.toPortId || !wire.fromNodeId || !wire.toNodeId) {
+          return { success: false, error: 'Invalid wire data' };
+        }
+      }
+
+      // Import the circuit
+      setCircuit(data.circuit);
+      propagateSignals();
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to parse JSON' };
+    }
+  }
+
   return {
     circuit,
     dragState,
@@ -353,6 +406,8 @@ function createCircuitStore() {
     propagateSignals,
     getWireState,
     clearCircuit,
+    exportCircuit,
+    importCircuit,
   };
 }
 
