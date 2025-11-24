@@ -15,6 +15,7 @@ interface ToolbarProps {
   onExport: () => void;
   onImport: (file: File) => void;
   hasSelection: boolean;
+  selectedCount: number;
 }
 
 export const Toolbar: Component<ToolbarProps> = (props) => {
@@ -81,9 +82,13 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
 
       <div class="toolbar-section">
         <h3>Groups</h3>
-        <button class="toolbar-btn group-btn" onClick={props.onCreateGroup}>
+        <button
+          class={`toolbar-btn group-btn ${props.selectedCount >= 2 ? 'highlighted' : ''}`}
+          onClick={props.onCreateGroup}
+          title={props.selectedCount < 2 ? 'Select 2+ components first (Ctrl/Cmd+Click)' : `Group ${props.selectedCount} selected components`}
+        >
           <span class="btn-icon">📦</span>
-          Group
+          Group {props.selectedCount >= 2 ? `(${props.selectedCount})` : ''}
         </button>
         <button class="toolbar-btn ungroup-btn" onClick={props.onUngroup}>
           <span class="btn-icon">📤</span>
@@ -133,15 +138,21 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
 
       <div class="toolbar-section toolbar-help">
         <h3>Help</h3>
+        {props.selectedCount > 0 && (
+          <div class="selection-indicator">
+            ✓ {props.selectedCount} component{props.selectedCount !== 1 ? 's' : ''} selected
+          </div>
+        )}
         <ul>
           <li>Tap buttons above to add components</li>
           <li>Drag components to move them</li>
           <li>Tap ports (circles) to connect wires</li>
           <li>Tap switch to toggle ON/OFF</li>
-          <li>Select component + Delete to remove</li>
-          <li>Ctrl/Cmd+Click to multi-select</li>
-          <li>Select 2+ components and Group them</li>
+          <li><strong>Drag on canvas to select multiple</strong></li>
+          <li>Ctrl/Cmd+Click for additional selection</li>
+          <li>Select 2+ and click Group to combine</li>
           <li>Double-click group to collapse/expand</li>
+          <li>Delete key to remove selected</li>
         </ul>
       </div>
     </div>

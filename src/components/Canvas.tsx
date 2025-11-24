@@ -24,6 +24,11 @@ export const Canvas: Component = () => {
   const [dragOffset, setDragOffset] = createSignal<Position>({ x: 0, y: 0 });
   const [dragStartPosition, setDragStartPosition] = createSignal<Position | null>(null);
 
+  // Selection box state
+  const [isSelectingBox, setIsSelectingBox] = createSignal(false);
+  const [selectionBoxStart, setSelectionBoxStart] = createSignal<Position | null>(null);
+  const [selectionBoxEnd, setSelectionBoxEnd] = createSignal<Position | null>(null);
+
   // Touch gesture state for pan/zoom
   const [pan, setPan] = createSignal<Position>({ x: 0, y: 0 });
   const [zoom, setZoom] = createSignal(1);
@@ -68,6 +73,12 @@ export const Canvas: Component = () => {
       const [p1, p2] = pointers;
       setLastPinchDistance(getDistance(p1, p2));
       setLastPinchCenter(getMidpoint(p1, p2));
+    } else if (e.target === svgRef) {
+      // Clicking on canvas background - start selection box
+      const point = getSvgPoint(e);
+      setSelectionBoxStart(point);
+      setSelectionBoxEnd(point);
+      setIsSelectingBox(true);
     }
   };
 
@@ -294,6 +305,12 @@ export const Canvas: Component = () => {
     const point = getSvgPoint(e);
     setMousePos(point);
 
+    // Update selection box if active
+    if (isSelectingBox()) {
+      setSelectionBoxEnd(point);
+      return;
+    }
+
     if (isDragging() && dragNodeId() && !isPanning()) {
       const offset = dragOffset();
       const currentZoom = zoom();
@@ -329,6 +346,47 @@ export const Canvas: Component = () => {
       setIsPanning(false);
       setLastPinchDistance(null);
       setLastPinchCenter(null);
+    }
+
+    // Complete selection box if active
+    if (isSelectingBox()) {
+      const start = selectionBoxStart();
+      const end = selectionBoxEnd();
+      if (start && end) {
+        // Calculate bounding box
+        const minX = Math.min(start.x, end.x);
+        const maxX = Math.max(start.x, end.x);
+        const minY = Math.min(start.y, end.y);
+        const maxY = Math.max(start.y, end.y);
+
+        // Find all nodes within the selection box
+        const selectedNodes = circuitStore.circuit.nodes.filter(node => {
+          const nodeRight = node.position.x + node.width;
+          const nodeBottom = node.position.y + node.height;
+          return (
+            node.position.x < maxX &&
+            nodeRight > minX &&
+            node.position.y < maxY &&
+            nodeBottom > minY
+          );
+        });
+
+        // Select nodes (check if Ctrl/Cmd is pressed for adding to selection)
+        if (e.ctrlKey || e.metaKey) {
+          // Add to existing selection
+          const currentIds = circuitStore.selectedNodeIds.ids;
+          const newIds = selectedNodes.map(n => n.id);
+          const combinedIds = Array.from(new Set([...currentIds, ...newIds]));
+          circuitStore.setSelection(combinedIds);
+        } else {
+          // Replace selection
+          circuitStore.setSelection(selectedNodes.map(n => n.id));
+        }
+      }
+
+      setIsSelectingBox(false);
+      setSelectionBoxStart(null);
+      setSelectionBoxEnd(null);
     }
 
     setIsDragging(false);
@@ -379,6 +437,7 @@ export const Canvas: Component = () => {
         onExport={handleExport}
         onImport={handleImport}
         hasSelection={circuitStore.selectedNodeIds.ids.length > 0}
+        selectedCount={circuitStore.selectedNodeIds.ids.length}
       />
       <div class="canvas-container">
         <svg
@@ -418,6 +477,21 @@ export const Canvas: Component = () => {
             {/* Wire preview while drawing */}
             {wireStart() && (
               <WirePreview from={wireStart()!.pos} to={mousePos()} />
+            )}
+
+            {/* Selection box */}
+            {isSelectingBox() && selectionBoxStart() && selectionBoxEnd() && (
+              <rect
+                x={Math.min(selectionBoxStart()!.x, selectionBoxEnd()!.x)}
+                y={Math.min(selectionBoxStart()!.y, selectionBoxEnd()!.y)}
+                width={Math.abs(selectionBoxEnd()!.x - selectionBoxStart()!.x)}
+                height={Math.abs(selectionBoxEnd()!.y - selectionBoxStart()!.y)}
+                fill="rgba(74, 222, 128, 0.1)"
+                stroke="#4ade80"
+                stroke-width={2}
+                stroke-dasharray="5,5"
+                pointer-events="none"
+              />
             )}
 
             {/* Nodes */}
