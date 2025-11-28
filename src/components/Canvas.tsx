@@ -29,6 +29,9 @@ export const Canvas: Component = () => {
   const [selectionBoxStart, setSelectionBoxStart] = createSignal<Position | null>(null);
   const [selectionBoxEnd, setSelectionBoxEnd] = createSignal<Position | null>(null);
 
+  // Group edge hover state (for creating ports)
+  const [hoveredGroupEdge, setHoveredGroupEdge] = createSignal<{ groupId: string; edge: 'left' | 'right'; y: number } | null>(null);
+
   // Touch gesture state for pan/zoom
   const [pan, setPan] = createSignal<Position>({ x: 0, y: 0 });
   const [zoom, setZoom] = createSignal(1);
@@ -314,6 +317,43 @@ export const Canvas: Component = () => {
     const point = getSvgPoint(e);
     setMousePos(point);
 
+    // Check if hovering over a group edge while drawing wire
+    if (wireStart()) {
+      const edgeThreshold = 20; // pixels from edge to trigger
+      let foundEdge = false;
+
+      for (const node of circuitStore.circuit.nodes) {
+        if (node.type === 'group' && !node.collapsed) {
+          const leftEdgeX = node.position.x;
+          const rightEdgeX = node.position.x + node.width;
+          const topY = node.position.y;
+          const bottomY = node.position.y + node.height;
+
+          // Check if mouse is near left or right edge and within vertical bounds
+          if (point.y >= topY && point.y <= bottomY) {
+            const distToLeft = Math.abs(point.x - leftEdgeX);
+            const distToRight = Math.abs(point.x - rightEdgeX);
+
+            if (distToLeft < edgeThreshold) {
+              setHoveredGroupEdge({ groupId: node.id, edge: 'left', y: point.y });
+              foundEdge = true;
+              break;
+            } else if (distToRight < edgeThreshold) {
+              setHoveredGroupEdge({ groupId: node.id, edge: 'right', y: point.y });
+              foundEdge = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!foundEdge) {
+        setHoveredGroupEdge(null);
+      }
+    } else {
+      setHoveredGroupEdge(null);
+    }
+
     // Update selection box if active
     if (isSelectingBox()) {
       setSelectionBoxEnd(point);
@@ -411,6 +451,30 @@ export const Canvas: Component = () => {
       setSelectionBoxEnd(null);
     }
 
+    // Handle completing wire to group edge
+    if (wireStart() && hoveredGroupEdge()) {
+      const edge = hoveredGroupEdge()!;
+      const currentWireStart = wireStart()!;
+
+      // Determine port type based on edge and wire start type
+      const portType = edge.edge === 'left' ? 'input' : 'output';
+
+      // Only allow valid connections (output -> input or input -> output)
+      if (currentWireStart.port.type !== portType) {
+        // Create port at the hovered position
+        const relativeY = edge.y;
+        const newPort = circuitStore.addGroupPort(edge.groupId, portType, relativeY);
+
+        if (newPort) {
+          // Connect wire to new port
+          circuitStore.addWire(currentWireStart.port.id, newPort.id);
+        }
+      }
+
+      setWireStart(null);
+      setHoveredGroupEdge(null);
+    }
+
     setIsDragging(false);
     setDragNodeId(null);
   };
@@ -484,8 +548,17 @@ export const Canvas: Component = () => {
 
           {/* Transformed content group for pan/zoom */}
           <g transform={`translate(${pan().x}, ${pan().y}) scale(${zoom()})`}>
-            {/* Wires */}
-            <For each={circuitStore.circuit.wires}>
+            {/* Wires - only render wires that are not internal to groups */}
+            <For each={circuitStore.circuit.wires.filter(wire => {
+              // Find if both nodes are children of the same group
+              const groups = circuitStore.circuit.nodes.filter(n => n.type === 'group');
+              const isInternalToGroup = groups.some(group =>
+                group.type === 'group' &&
+                group.childNodeIds.includes(wire.fromNodeId) &&
+                group.childNodeIds.includes(wire.toNodeId)
+              );
+              return !isInternalToGroup;
+            })}>
               {(wire) => (
                 <Wire wire={wire} onDelete={(id) => circuitStore.removeWire(id)} />
               )}
@@ -495,6 +568,44 @@ export const Canvas: Component = () => {
             {wireStart() && (
               <WirePreview from={wireStart()!.pos} to={mousePos()} />
             )}
+
+            {/* Group edge hover indicator (shows where port will be created) */}
+            {hoveredGroupEdge() && (() => {
+              const edge = hoveredGroupEdge()!;
+              const group = circuitStore.circuit.nodes.find(n => n.id === edge.groupId && n.type === 'group');
+              if (!group || group.type !== 'group') return null;
+
+              const x = edge.edge === 'left' ? group.position.x : group.position.x + group.width;
+              const y = edge.y;
+
+              return (
+                <>
+                  {/* Highlight line on edge */}
+                  <line
+                    x1={x}
+                    y1={y - 20}
+                    x2={x}
+                    y2={y + 20}
+                    stroke="#4ade80"
+                    stroke-width={4}
+                    stroke-linecap="round"
+                    opacity={0.8}
+                    pointer-events="none"
+                  />
+                  {/* Port preview circle */}
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={10}
+                    fill="#4ade80"
+                    stroke="#fff"
+                    stroke-width={2}
+                    opacity={0.6}
+                    pointer-events="none"
+                  />
+                </>
+              );
+            })()}
 
             {/* Selection box */}
             {isSelectingBox() && selectionBoxStart() && selectionBoxEnd() && (
@@ -511,8 +622,13 @@ export const Canvas: Component = () => {
               />
             )}
 
-            {/* Nodes */}
-            <For each={circuitStore.circuit.nodes}>
+            {/* Nodes - only render top-level nodes (not children of groups) */}
+            <For each={circuitStore.circuit.nodes.filter(node => {
+              // Check if this node is a child of any group
+              return !circuitStore.circuit.nodes.some(n =>
+                n.type === 'group' && n.childNodeIds.includes(node.id)
+              );
+            })}>
               {(node) => {
                 const isSelected = circuitStore.selectedNodeIds.ids.includes(node.id);
 
