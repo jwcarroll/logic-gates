@@ -501,7 +501,8 @@ export const Canvas: Component = () => {
       // Only allow valid connections (output -> input or input -> output)
       if (currentWireStart.port.type !== portType) {
         // Create port at the hovered position
-        const relativeY = edge.y;
+        const group = circuitStore.circuit.nodes.find(n => n.id === edge.groupId && n.type === 'group');
+        const relativeY = group ? edge.y - group.position.y : edge.y;
         const newPort = circuitStore.addGroupPort(edge.groupId, portType, relativeY);
 
         if (newPort) {
