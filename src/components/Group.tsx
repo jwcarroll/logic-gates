@@ -11,6 +11,7 @@ interface GroupProps {
   node: GroupNode;
   onStartDrag: (nodeId: string, clientPos: Position, isMultiSelect?: boolean) => void;
   onPortClick: (portId: string, nodeId: string, type: 'input' | 'output') => void;
+  onStartResize: (nodeId: string, clientPos: Position) => void;
   isSelected: boolean;
 }
 
@@ -41,6 +42,13 @@ export const Group: Component<GroupProps> = (props) => {
   const handleDoubleClick = (e: MouseEvent) => {
     e.stopPropagation();
     circuitStore.toggleGroupCollapse(props.node.id);
+  };
+
+  const handleResizeStart = (e: PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    props.onStartResize(props.node.id, { x: e.clientX, y: e.clientY });
   };
 
   return (
@@ -213,6 +221,28 @@ export const Group: Component<GroupProps> = (props) => {
           );
         }}
       </For>
+
+      {/* Resize handle - bottom right corner */}
+      <g class="resize-handle">
+        {/* Larger invisible touch target */}
+        <rect
+          x={props.node.width - 20}
+          y={props.node.height - 20}
+          width={20}
+          height={20}
+          fill="transparent"
+          style={{ cursor: 'nwse-resize' }}
+          onPointerDown={handleResizeStart}
+        />
+        {/* Visible resize indicator */}
+        <path
+          d={`M ${props.node.width - 12} ${props.node.height - 4} L ${props.node.width - 4} ${props.node.height - 12} M ${props.node.width - 8} ${props.node.height - 4} L ${props.node.width - 4} ${props.node.height - 8}`}
+          stroke={props.isSelected ? '#6ab0ff' : '#888'}
+          stroke-width={2}
+          stroke-linecap="round"
+          pointer-events="none"
+        />
+      </g>
     </g>
   );
 };

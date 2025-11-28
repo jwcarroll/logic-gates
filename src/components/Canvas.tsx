@@ -22,7 +22,6 @@ export const Canvas: Component = () => {
   const [isDragging, setIsDragging] = createSignal(false);
   const [dragNodeId, setDragNodeId] = createSignal<string | null>(null);
   const [dragOffset, setDragOffset] = createSignal<Position>({ x: 0, y: 0 });
-  const [dragStartPosition, setDragStartPosition] = createSignal<Position | null>(null);
 
   // Selection box state
   const [isSelectingBox, setIsSelectingBox] = createSignal(false);
@@ -31,6 +30,12 @@ export const Canvas: Component = () => {
 
   // Group edge hover state (for creating ports)
   const [hoveredGroupEdge, setHoveredGroupEdge] = createSignal<{ groupId: string; edge: 'left' | 'right'; y: number } | null>(null);
+
+  // Group resize state
+  const [isResizing, setIsResizing] = createSignal(false);
+  const [resizeGroupId, setResizeGroupId] = createSignal<string | null>(null);
+  const [resizeStartSize, setResizeStartSize] = createSignal<{ width: number; height: number } | null>(null);
+  const [resizeStartPos, setResizeStartPos] = createSignal<Position | null>(null);
 
   // Touch gesture state for pan/zoom
   const [pan, setPan] = createSignal<Position>({ x: 0, y: 0 });
@@ -214,8 +219,8 @@ export const Canvas: Component = () => {
   };
 
   const handleStartDrag = (nodeId: string, clientPos: Position, isMultiSelect: boolean = false) => {
-    // Don't start drag if we're in a multi-touch gesture
-    if (activePointers().length >= 2) return;
+    // Don't start drag if we're in a multi-touch gesture or resizing
+    if (activePointers().length >= 2 || isResizing()) return;
 
     // Calculate offset accounting for pan/zoom transform
     const node = circuitStore.circuit.nodes.find(n => n.id === nodeId);
@@ -232,7 +237,6 @@ export const Canvas: Component = () => {
     setIsDragging(true);
     setDragNodeId(nodeId);
     setDragOffset(offset);
-    setDragStartPosition(node.position);
 
     // Handle multi-selection with Ctrl/Cmd key
     if (isMultiSelect) {
@@ -244,6 +248,19 @@ export const Canvas: Component = () => {
         circuitStore.setSelection([nodeId]);
       }
     }
+  };
+
+  const handleStartResize = (groupId: string, clientPos: Position) => {
+    // Don't start resize if we're in a multi-touch gesture or dragging
+    if (activePointers().length >= 2 || isDragging()) return;
+
+    const group = circuitStore.circuit.nodes.find(n => n.id === groupId && n.type === 'group');
+    if (!group || group.type !== 'group') return;
+
+    setIsResizing(true);
+    setResizeGroupId(groupId);
+    setResizeStartSize({ width: group.width, height: group.height });
+    setResizeStartPos({ x: clientPos.x, y: clientPos.y });
   };
 
   const handlePortClick = (portId: string, nodeId: string, type: 'input' | 'output') => {
@@ -323,7 +340,7 @@ export const Canvas: Component = () => {
       let foundEdge = false;
 
       for (const node of circuitStore.circuit.nodes) {
-        if (node.type === 'group' && !node.collapsed) {
+        if (node.type === 'group') {
           const leftEdgeX = node.position.x;
           const rightEdgeX = node.position.x + node.width;
           const topY = node.position.y;
@@ -360,6 +377,23 @@ export const Canvas: Component = () => {
       return;
     }
 
+    // Handle group resizing
+    if (isResizing() && resizeGroupId()) {
+      const startPos = resizeStartPos();
+      const startSize = resizeStartSize();
+      if (startPos && startSize) {
+        const currentZoom = zoom();
+        const deltaX = (e.clientX - startPos.x) / currentZoom;
+        const deltaY = (e.clientY - startPos.y) / currentZoom;
+
+        const newWidth = startSize.width + deltaX;
+        const newHeight = startSize.height + deltaY;
+
+        circuitStore.resizeGroup(resizeGroupId()!, newWidth, newHeight);
+      }
+      return;
+    }
+
     if (isDragging() && dragNodeId() && !isPanning()) {
       const offset = dragOffset();
       const currentZoom = zoom();
@@ -371,11 +405,12 @@ export const Canvas: Component = () => {
 
       const draggedNode = circuitStore.circuit.nodes.find(n => n.id === dragNodeId()!);
       if (draggedNode?.type === 'group') {
-        // When dragging a group, move all child nodes
-        const startPos = dragStartPosition();
-        if (startPos) {
-          const deltaX = newPos.x - startPos.x;
-          const deltaY = newPos.y - startPos.y;
+        // When dragging a group, calculate delta from current position (not start position)
+        const deltaX = newPos.x - draggedNode.position.x;
+        const deltaY = newPos.y - draggedNode.position.y;
+
+        // Only update if there's actual movement
+        if (deltaX !== 0 || deltaY !== 0) {
           circuitStore.updateGroupPositions(dragNodeId()!, deltaX, deltaY);
         }
       }
@@ -477,6 +512,8 @@ export const Canvas: Component = () => {
 
     setIsDragging(false);
     setDragNodeId(null);
+    setIsResizing(false);
+    setResizeGroupId(null);
   };
 
   // Note: Selection clearing is now handled in handlePointerUp to work with selection box
@@ -668,6 +705,7 @@ export const Canvas: Component = () => {
                       node={node}
                       onStartDrag={handleStartDrag}
                       onPortClick={handlePortClick}
+                      onStartResize={handleStartResize}
                       isSelected={isSelected}
                     />
                   );

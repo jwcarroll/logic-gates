@@ -796,6 +796,27 @@ function createCircuitStore() {
     return true;
   }
 
+  function resizeGroup(groupId: string, width: number, height: number): boolean {
+    const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+    if (!group) return false;
+
+    // Enforce minimum size
+    const minWidth = 100;
+    const minHeight = 80;
+
+    setCircuit(
+      produce((c) => {
+        const g = c.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+        if (!g) return;
+
+        g.width = Math.max(minWidth, width);
+        g.height = Math.max(minHeight, height);
+      })
+    );
+
+    return true;
+  }
+
   return {
     circuit,
     dragState,
@@ -829,6 +850,7 @@ function createCircuitStore() {
     updateGroupPositions,
     addGroupPort,
     removeGroupPort,
+    resizeGroup,
   };
 }
 
