@@ -626,6 +626,15 @@ function createCircuitStore() {
     );
   }
 
+  function setGroupCollapse(groupId: string, collapsed: boolean) {
+    setCircuit(
+      'nodes',
+      (n) => n.id === groupId && n.type === 'group',
+      'collapsed' as any,
+      () => collapsed
+    );
+  }
+
   function cloneGroup(groupId: string): string | null {
     const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
     if (!group) return null;
@@ -934,6 +943,7 @@ function createCircuitStore() {
     createGroupFromSelected,
     ungroupNode,
     toggleGroupCollapse,
+    setGroupCollapse,
     cloneGroup,
     updateGroupPositions,
     addGroupPort,
