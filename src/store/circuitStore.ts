@@ -251,7 +251,9 @@ function createCircuitStore() {
     }
 
     if (node.type === 'group') {
-      const relativeY = port.position?.y ?? node.height / 2;
+      const portCount = port.type === 'input' ? node.inputPorts.length : node.outputPorts.length;
+      const legacyY = node.height / (portCount + 1) * (port.index + 1);
+      const relativeY = port.position?.y || legacyY;
       return {
         x: port.type === 'input' ? node.position.x : node.position.x + node.width,
         y: node.position.y + relativeY,
