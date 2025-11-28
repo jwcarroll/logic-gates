@@ -267,7 +267,7 @@ export const Canvas: Component = () => {
     setResizeStartPos({ x: clientPos.x, y: clientPos.y });
   };
 
-  const handlePortClick = (portId: string, nodeId: string, type: 'input' | 'output') => {
+  const handlePortClick = (portId: string, _nodeId: string, _type: 'input' | 'output') => {
     const port = circuitStore.findPort(portId);
     if (!port) return;
 
@@ -279,9 +279,7 @@ export const Canvas: Component = () => {
       setWireStart({ port, pos });
     } else {
       // Complete the wire
-      if (currentWireStart.port.type !== type && currentWireStart.port.nodeId !== nodeId) {
-        circuitStore.addWire(currentWireStart.port.id, portId);
-      }
+      circuitStore.addWire(currentWireStart.port.id, portId);
       setWireStart(null);
     }
   };
@@ -498,17 +496,14 @@ export const Canvas: Component = () => {
       // Determine port type based on edge and wire start type
       const portType = edge.edge === 'left' ? 'input' : 'output';
 
-      // Only allow valid connections (output -> input or input -> output)
-      if (currentWireStart.port.type !== portType) {
-        // Create port at the hovered position
-        const group = circuitStore.circuit.nodes.find(n => n.id === edge.groupId && n.type === 'group');
-        const relativeY = group ? edge.y - group.position.y : edge.y;
-        const newPort = circuitStore.addGroupPort(edge.groupId, portType, relativeY);
+      // Create port at the hovered position
+      const group = circuitStore.circuit.nodes.find(n => n.id === edge.groupId && n.type === 'group');
+      const relativeY = group ? edge.y - group.position.y : edge.y;
+      const newPort = circuitStore.addGroupPort(edge.groupId, portType, relativeY);
 
-        if (newPort) {
-          // Connect wire to new port
-          circuitStore.addWire(currentWireStart.port.id, newPort.id);
-        }
+      if (newPort) {
+        // Connect wire to new port (will validate direction internally)
+        circuitStore.addWire(currentWireStart.port.id, newPort.id);
       }
 
       setWireStart(null);
