@@ -247,7 +247,21 @@ export const Canvas: Component = () => {
 
   const handleStartDrag = (nodeId: string, clientPos: Position, isMultiSelect: boolean = false) => {
     // Don't start drag if we're in a multi-touch gesture or resizing
-    if (activeTool() === 'pan' || panMode() !== null || activePointers().length >= 2 || isResizing()) return;
+    if (activePointers().length >= 2 || isResizing()) return;
+
+    // When panning is active (hand tool or space), start pan even when dragging on nodes
+    if (activeTool() === 'pan' || isSpacePressed()) {
+      setPanMode('mouse');
+      setLastPanPoint({ x: clientPos.x, y: clientPos.y });
+      setIsSelectingBox(false);
+      setSelectionBoxStart(null);
+      setSelectionBoxEnd(null);
+      setIsDragging(false);
+      setDragNodeId(null);
+      return;
+    }
+
+    if (panMode() !== null) return;
 
     // Calculate offset accounting for pan/zoom transform
     const node = circuitStore.circuit.nodes.find(n => n.id === nodeId);
