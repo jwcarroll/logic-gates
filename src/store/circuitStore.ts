@@ -157,17 +157,42 @@ function createCircuitStore() {
     propagateSignals();
   }
 
-  function addWire(fromPortId: string, toPortId: string) {
+  function addWire(fromPortId: string, toPortId: string): boolean {
     const fromPort = findPort(fromPortId);
     const toPort = findPort(toPortId);
 
-    if (!fromPort || !toPort) return;
-    if (fromPort.type === toPort.type) return;
-    if (fromPort.nodeId === toPort.nodeId) return;
+    if (!fromPort || !toPort) return false;
+    if (fromPort.nodeId === toPort.nodeId) return false;
 
-    // Ensure we're connecting output to input
-    const [outputPort, inputPort] =
-      fromPort.type === 'output' ? [fromPort, toPort] : [toPort, fromPort];
+    const fromNode = circuit.nodes.find((n) => n.id === fromPort.nodeId);
+    const toNode = circuit.nodes.find((n) => n.id === toPort.nodeId);
+
+    if (!fromNode || !toNode) return false;
+
+    const isChildConnection = (parent: CircuitNode, child: CircuitNode) =>
+      parent.type === 'group' && child.type !== 'group' && parent.childNodeIds.includes(child.id);
+
+    let outputPort: Port | null = null;
+    let inputPort: Port | null = null;
+
+    if (fromPort.type !== toPort.type) {
+      // Standard connection rules
+      [outputPort, inputPort] = fromPort.type === 'output' ? [fromPort, toPort] : [toPort, fromPort];
+    } else {
+      // Allow group boundary mapping even when port types match
+      if (isChildConnection(fromNode, toNode)) {
+        // Connecting from group port to its child
+        outputPort = fromPort.type === 'input' ? fromPort : toPort;
+        inputPort = fromPort.type === 'input' ? toPort : fromPort;
+      } else if (isChildConnection(toNode, fromNode)) {
+        // Connecting from child to its parent group port
+        outputPort = fromPort.type === 'input' ? toPort : fromPort;
+        inputPort = fromPort.type === 'input' ? fromPort : toPort;
+      }
+    }
+
+    // If we still don't have a valid output/input pair, abort
+    if (!outputPort || !inputPort) return false;
 
     // Check if input port already has a connection
     const existingWire = circuit.wires.find((w) => w.toPortId === inputPort.id);
@@ -186,6 +211,7 @@ function createCircuitStore() {
 
     setCircuit('wires', (wires) => [...wires, wire]);
     propagateSignals();
+    return true;
   }
 
   function removeWire(wireId: string) {
