@@ -817,6 +817,73 @@ function createCircuitStore() {
     return true;
   }
 
+  function createEmptyGroup(position: Position, label: string = 'Group'): string {
+    const groupId = generateId();
+    const group: GroupNode = {
+      id: groupId,
+      type: 'group',
+      label,
+      position,
+      width: 200,
+      height: 150,
+      childNodeIds: [],
+      collapsed: false,
+      inputPorts: [],
+      outputPorts: [],
+    };
+
+    setCircuit(
+      produce((c) => {
+        c.nodes.push(group);
+      })
+    );
+
+    setSelection([groupId]);
+    return groupId;
+  }
+
+  function addNodeToGroup(nodeId: string, groupId: string): boolean {
+    const node = circuit.nodes.find((n) => n.id === nodeId);
+    const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+
+    if (!node || !group || node.type === 'group') return false;
+
+    // Don't add if already a child of this or another group
+    const isAlreadyChild = circuit.nodes.some(
+      (n) => n.type === 'group' && n.childNodeIds.includes(nodeId)
+    );
+    if (isAlreadyChild) return false;
+
+    setCircuit(
+      produce((c) => {
+        const g = c.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+        if (!g) return;
+
+        g.childNodeIds.push(nodeId);
+      })
+    );
+
+    return true;
+  }
+
+  function removeNodeFromGroup(nodeId: string): boolean {
+    setCircuit(
+      produce((c) => {
+        for (const node of c.nodes) {
+          if (node.type === 'group') {
+            const index = node.childNodeIds.indexOf(nodeId);
+            if (index >= 0) {
+              node.childNodeIds.splice(index, 1);
+              return;
+            }
+          }
+        }
+      })
+    );
+
+    return true;
+  }
+
   return {
     circuit,
     dragState,
@@ -851,6 +918,9 @@ function createCircuitStore() {
     addGroupPort,
     removeGroupPort,
     resizeGroup,
+    createEmptyGroup,
+    addNodeToGroup,
+    removeNodeFromGroup,
   };
 }
 
