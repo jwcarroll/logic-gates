@@ -1,7 +1,11 @@
 import type { Component } from 'solid-js';
-import { For } from 'solid-js';
+import { For, Show } from 'solid-js';
 import type { GroupNode, Position } from '../types/circuit';
 import { circuitStore } from '../store/circuitStore';
+import { Switch } from './Switch';
+import { Light } from './Light';
+import { Gate } from './Gate';
+import { Wire } from './Wire';
 
 interface GroupProps {
   node: GroupNode;
@@ -74,6 +78,74 @@ export const Group: Component<GroupProps> = (props) => {
           (Double-click to expand)
         </text>
       )}
+
+      {/* Child nodes - only render when expanded */}
+      <Show when={!props.node.collapsed}>
+        <g class="group-children">
+          {/* Internal wires (between child nodes) */}
+          <For each={circuitStore.circuit.wires.filter(wire =>
+            props.node.childNodeIds.includes(wire.fromNodeId) &&
+            props.node.childNodeIds.includes(wire.toNodeId)
+          )}>
+            {(wire) => (
+              <Wire wire={wire} onDelete={(id) => circuitStore.removeWire(id)} />
+            )}
+          </For>
+
+          {/* Child nodes */}
+          <For each={props.node.childNodeIds}>
+            {(childId) => {
+              const childNode = circuitStore.circuit.nodes.find(n => n.id === childId);
+              if (!childNode) return null;
+
+              const isSelected = circuitStore.selectedNodeIds.ids.includes(childId);
+
+              // Render child in absolute position (they already have correct positions)
+              // We translate back by group position since they're inside the group's transform
+              const relativeX = childNode.position.x - props.node.position.x;
+              const relativeY = childNode.position.y - props.node.position.y;
+
+              if (childNode.type === 'switch') {
+                return (
+                  <g transform={`translate(${relativeX}, ${relativeY})`}>
+                    <Switch
+                      node={{ ...childNode, position: { x: 0, y: 0 } }}
+                      onStartDrag={props.onStartDrag}
+                      onPortClick={props.onPortClick}
+                      isSelected={isSelected}
+                    />
+                  </g>
+                );
+              }
+              if (childNode.type === 'light') {
+                return (
+                  <g transform={`translate(${relativeX}, ${relativeY})`}>
+                    <Light
+                      node={{ ...childNode, position: { x: 0, y: 0 } }}
+                      onStartDrag={props.onStartDrag}
+                      onPortClick={props.onPortClick}
+                      isSelected={isSelected}
+                    />
+                  </g>
+                );
+              }
+              if (childNode.type === 'gate') {
+                return (
+                  <g transform={`translate(${relativeX}, ${relativeY})`}>
+                    <Gate
+                      node={{ ...childNode, position: { x: 0, y: 0 } }}
+                      onStartDrag={props.onStartDrag}
+                      onPortClick={props.onPortClick}
+                      isSelected={isSelected}
+                    />
+                  </g>
+                );
+              }
+              return null;
+            }}
+          </For>
+        </g>
+      </Show>
 
       {/* Input ports */}
       <For each={props.node.inputPorts}>

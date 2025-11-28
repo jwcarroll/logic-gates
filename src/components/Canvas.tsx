@@ -484,8 +484,17 @@ export const Canvas: Component = () => {
 
           {/* Transformed content group for pan/zoom */}
           <g transform={`translate(${pan().x}, ${pan().y}) scale(${zoom()})`}>
-            {/* Wires */}
-            <For each={circuitStore.circuit.wires}>
+            {/* Wires - only render wires that are not internal to groups */}
+            <For each={circuitStore.circuit.wires.filter(wire => {
+              // Find if both nodes are children of the same group
+              const groups = circuitStore.circuit.nodes.filter(n => n.type === 'group');
+              const isInternalToGroup = groups.some(group =>
+                group.type === 'group' &&
+                group.childNodeIds.includes(wire.fromNodeId) &&
+                group.childNodeIds.includes(wire.toNodeId)
+              );
+              return !isInternalToGroup;
+            })}>
               {(wire) => (
                 <Wire wire={wire} onDelete={(id) => circuitStore.removeWire(id)} />
               )}
@@ -511,8 +520,13 @@ export const Canvas: Component = () => {
               />
             )}
 
-            {/* Nodes */}
-            <For each={circuitStore.circuit.nodes}>
+            {/* Nodes - only render top-level nodes (not children of groups) */}
+            <For each={circuitStore.circuit.nodes.filter(node => {
+              // Check if this node is a child of any group
+              return !circuitStore.circuit.nodes.some(n =>
+                n.type === 'group' && n.childNodeIds.includes(node.id)
+              );
+            })}>
               {(node) => {
                 const isSelected = circuitStore.selectedNodeIds.ids.includes(node.id);
 
