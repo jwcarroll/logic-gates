@@ -26,6 +26,15 @@ export const Group: Component<GroupProps> = (props) => {
 
   const handlePortClick = (e: PointerEvent, portId: string, type: 'input' | 'output') => {
     e.stopPropagation();
+
+    // Ctrl/Cmd + Click to delete port
+    if (e.ctrlKey || e.metaKey) {
+      if (confirm('Delete this port? All connected wires will be removed.')) {
+        circuitStore.removeGroupPort(props.node.id, portId);
+      }
+      return;
+    }
+
     props.onPortClick(portId, props.node.id, type);
   };
 

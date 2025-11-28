@@ -520,7 +520,7 @@ function createCircuitStore() {
   // Group operations
   function createGroupFromSelected(label: string = 'Group'): string | null {
     const selectedIds = selectedNodeIds.ids;
-    if (selectedIds.length < 2) return null;
+    if (selectedIds.length < 1) return null;
 
     // Get all selected nodes
     const selectedNodes = circuit.nodes.filter((n) => selectedIds.includes(n.id));
@@ -539,46 +539,9 @@ function createCircuitStore() {
     const groupWidth = maxX - minX + padding * 2;
     const groupHeight = maxY - minY + padding * 2;
 
-    // Find external connections (wires connecting to nodes outside the group)
-    const externalInputs: Map<string, Port> = new Map();
-    const externalOutputs: Map<string, Port> = new Map();
-
-    for (const wire of circuit.wires) {
-      const fromInGroup = selectedIds.includes(wire.fromNodeId);
-      const toInGroup = selectedIds.includes(wire.toNodeId);
-
-      if (fromInGroup && !toInGroup) {
-        // Output from group to external node
-        const fromPort = findPort(wire.fromPortId);
-        if (fromPort) {
-          externalOutputs.set(wire.fromPortId, fromPort);
-        }
-      } else if (!fromInGroup && toInGroup) {
-        // Input from external node to group
-        const toPort = findPort(wire.toPortId);
-        if (toPort) {
-          externalInputs.set(wire.toPortId, toPort);
-        }
-      }
-    }
-
-    // Create group node with external ports
+    // Create group node with NO ports initially
+    // User will add ports manually by dragging wires to edges
     const groupId = generateId();
-    const inputPorts: Port[] = Array.from(externalInputs.values()).map((_port, index) => ({
-      id: generateId(),
-      nodeId: groupId,
-      type: 'input' as const,
-      index,
-      position: { x: 0, y: 0 },
-    }));
-
-    const outputPorts: Port[] = Array.from(externalOutputs.values()).map((_port, index) => ({
-      id: generateId(),
-      nodeId: groupId,
-      type: 'output' as const,
-      index,
-      position: { x: 0, y: 0 },
-    }));
 
     const group: GroupNode = {
       id: groupId,
@@ -589,38 +552,23 @@ function createCircuitStore() {
       height: groupHeight,
       childNodeIds: selectedIds,
       collapsed: true,
-      inputPorts,
-      outputPorts,
+      inputPorts: [],
+      outputPorts: [],
     };
 
-    // Update wires to connect to group ports instead of internal nodes
+    // Remove any external wires (they will be reconnected manually)
     setCircuit(
       produce((c) => {
         // Add group node
         c.nodes.push(group);
 
-        // Remap external wires to group ports
-        const inputPortMapping = new Map<string, string>();
-        const outputPortMapping = new Map<string, string>();
-
-        Array.from(externalInputs.keys()).forEach((oldPortId, index) => {
-          inputPortMapping.set(oldPortId, inputPorts[index].id);
+        // Remove wires that cross the group boundary
+        c.wires = c.wires.filter((wire) => {
+          const fromInGroup = selectedIds.includes(wire.fromNodeId);
+          const toInGroup = selectedIds.includes(wire.toNodeId);
+          // Keep only wires that are fully internal or fully external
+          return (fromInGroup && toInGroup) || (!fromInGroup && !toInGroup);
         });
-
-        Array.from(externalOutputs.keys()).forEach((oldPortId, index) => {
-          outputPortMapping.set(oldPortId, outputPorts[index].id);
-        });
-
-        for (const wire of c.wires) {
-          if (outputPortMapping.has(wire.fromPortId)) {
-            wire.fromPortId = outputPortMapping.get(wire.fromPortId)!;
-            wire.fromNodeId = groupId;
-          }
-          if (inputPortMapping.has(wire.toPortId)) {
-            wire.toPortId = inputPortMapping.get(wire.toPortId)!;
-            wire.toNodeId = groupId;
-          }
-        }
       })
     );
 
@@ -794,6 +742,60 @@ function createCircuitStore() {
     );
   }
 
+  function addGroupPort(groupId: string, type: 'input' | 'output', _relativeY: number): Port | null {
+    const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+    if (!group) return null;
+
+    const newPort: Port = {
+      id: generateId(),
+      nodeId: groupId,
+      type,
+      index: type === 'input' ? group.inputPorts.length : group.outputPorts.length,
+      position: { x: 0, y: 0 },
+    };
+
+    setCircuit(
+      produce((c) => {
+        const g = c.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+        if (!g) return;
+
+        if (type === 'input') {
+          g.inputPorts.push(newPort);
+        } else {
+          g.outputPorts.push(newPort);
+        }
+      })
+    );
+
+    return newPort;
+  }
+
+  function removeGroupPort(groupId: string, portId: string): boolean {
+    const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+    if (!group) return false;
+
+    setCircuit(
+      produce((c) => {
+        const g = c.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
+        if (!g) return;
+
+        // Remove port from group
+        g.inputPorts = g.inputPorts.filter((p) => p.id !== portId);
+        g.outputPorts = g.outputPorts.filter((p) => p.id !== portId);
+
+        // Re-index remaining ports
+        g.inputPorts.forEach((p, i) => (p.index = i));
+        g.outputPorts.forEach((p, i) => (p.index = i));
+
+        // Remove any wires connected to this port
+        c.wires = c.wires.filter((w) => w.fromPortId !== portId && w.toPortId !== portId);
+      })
+    );
+
+    propagateSignals();
+    return true;
+  }
+
   return {
     circuit,
     dragState,
@@ -825,6 +827,8 @@ function createCircuitStore() {
     toggleGroupCollapse,
     cloneGroup,
     updateGroupPositions,
+    addGroupPort,
+    removeGroupPort,
   };
 }
 
