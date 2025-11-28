@@ -73,12 +73,21 @@ export const Canvas: Component = () => {
       const [p1, p2] = pointers;
       setLastPinchDistance(getDistance(p1, p2));
       setLastPinchCenter(getMidpoint(p1, p2));
-    } else if (e.target === svgRef) {
-      // Clicking on canvas background - start selection box
-      const point = getSvgPoint(e);
-      setSelectionBoxStart(point);
-      setSelectionBoxEnd(point);
-      setIsSelectingBox(true);
+    } else {
+      // Check if clicking on a circuit node (components call stopPropagation, so this means we clicked on empty space)
+      // This will be true for clicks on background, grid, or transform group - all non-interactive elements
+      const target = e.target as Element;
+      const isClickingOnNode = target.classList?.contains('circuit-node') ||
+                                target.closest('.circuit-node') ||
+                                target.classList?.contains('port-touch-target');
+
+      if (!isClickingOnNode) {
+        // Clicking on canvas background - start selection box
+        const point = getSvgPoint(e);
+        setSelectionBoxStart(point);
+        setSelectionBoxEnd(point);
+        setIsSelectingBox(true);
+      }
     }
   };
 
@@ -359,28 +368,41 @@ export const Canvas: Component = () => {
         const minY = Math.min(start.y, end.y);
         const maxY = Math.max(start.y, end.y);
 
-        // Find all nodes within the selection box
-        const selectedNodes = circuitStore.circuit.nodes.filter(node => {
-          const nodeRight = node.position.x + node.width;
-          const nodeBottom = node.position.y + node.height;
-          return (
-            node.position.x < maxX &&
-            nodeRight > minX &&
-            node.position.y < maxY &&
-            nodeBottom > minY
-          );
-        });
+        // Check if this was just a click (tiny box) - threshold of 5 pixels
+        const boxWidth = maxX - minX;
+        const boxHeight = maxY - minY;
+        const isClick = boxWidth < 5 && boxHeight < 5;
 
-        // Select nodes (check if Ctrl/Cmd is pressed for adding to selection)
-        if (e.ctrlKey || e.metaKey) {
-          // Add to existing selection
-          const currentIds = circuitStore.selectedNodeIds.ids;
-          const newIds = selectedNodes.map(n => n.id);
-          const combinedIds = Array.from(new Set([...currentIds, ...newIds]));
-          circuitStore.setSelection(combinedIds);
+        if (isClick) {
+          // Just a click on empty space - clear selection unless Ctrl/Cmd is pressed
+          if (!e.ctrlKey && !e.metaKey) {
+            circuitStore.clearSelection();
+            setWireStart(null);
+          }
         } else {
-          // Replace selection
-          circuitStore.setSelection(selectedNodes.map(n => n.id));
+          // Actual drag - find all nodes within the selection box
+          const selectedNodes = circuitStore.circuit.nodes.filter(node => {
+            const nodeRight = node.position.x + node.width;
+            const nodeBottom = node.position.y + node.height;
+            return (
+              node.position.x < maxX &&
+              nodeRight > minX &&
+              node.position.y < maxY &&
+              nodeBottom > minY
+            );
+          });
+
+          // Select nodes (check if Ctrl/Cmd is pressed for adding to selection)
+          if (e.ctrlKey || e.metaKey) {
+            // Add to existing selection
+            const currentIds = circuitStore.selectedNodeIds.ids;
+            const newIds = selectedNodes.map(n => n.id);
+            const combinedIds = Array.from(new Set([...currentIds, ...newIds]));
+            circuitStore.setSelection(combinedIds);
+          } else {
+            // Replace selection
+            circuitStore.setSelection(selectedNodes.map(n => n.id));
+          }
         }
       }
 
@@ -393,12 +415,8 @@ export const Canvas: Component = () => {
     setDragNodeId(null);
   };
 
-  const handleCanvasClick = (e: PointerEvent | MouseEvent) => {
-    if (e.target === svgRef) {
-      circuitStore.clearSelection();
-      setWireStart(null);
-    }
-  };
+  // Note: Selection clearing is now handled in handlePointerUp to work with selection box
+  // This prevents interference between click and selection box logic
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -448,7 +466,6 @@ export const Canvas: Component = () => {
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          onClick={handleCanvasClick}
           style={{ "touch-action": "none" }}
         >
           {/* Grid pattern */}
