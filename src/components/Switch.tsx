@@ -81,8 +81,9 @@ export const Switch: Component<SwitchProps> = (props) => {
           fill="transparent"
           class="port-touch-target"
           style={{ cursor: 'crosshair' }}
-          onClick={(e) => {
+          onPointerDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             props.onPortClick(props.node.outputPort.id, props.node.id, 'output');
           }}
         />

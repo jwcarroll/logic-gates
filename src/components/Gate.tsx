@@ -92,8 +92,9 @@ export const Gate: Component<GateProps> = (props) => {
               fill="transparent"
               class="port-touch-target"
               style={{ cursor: 'crosshair' }}
-              onClick={(e) => {
+              onPointerDown={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 props.onPortClick(port.id, props.node.id, 'input');
               }}
             />
@@ -121,8 +122,9 @@ export const Gate: Component<GateProps> = (props) => {
           fill="transparent"
           class="port-touch-target"
           style={{ cursor: 'crosshair' }}
-          onClick={(e) => {
+          onPointerDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
             props.onPortClick(props.node.outputPort.id, props.node.id, 'output');
           }}
         />
