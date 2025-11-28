@@ -251,21 +251,11 @@ function createCircuitStore() {
     }
 
     if (node.type === 'group') {
-      if (port.type === 'input') {
-        const inputCount = node.inputPorts.length;
-        const spacing = inputCount > 1 ? node.height / (inputCount + 1) : node.height / 2;
-        return {
-          x: node.position.x,
-          y: node.position.y + spacing * (port.index + 1),
-        };
-      } else {
-        const outputCount = node.outputPorts.length;
-        const spacing = outputCount > 1 ? node.height / (outputCount + 1) : node.height / 2;
-        return {
-          x: node.position.x + node.width,
-          y: node.position.y + spacing * (port.index + 1),
-        };
-      }
+      const relativeY = port.position?.y ?? node.height / 2;
+      return {
+        x: port.type === 'input' ? node.position.x : node.position.x + node.width,
+        y: node.position.y + relativeY,
+      };
     }
 
     return { x: 0, y: 0 };
@@ -742,16 +732,19 @@ function createCircuitStore() {
     );
   }
 
-  function addGroupPort(groupId: string, type: 'input' | 'output', _relativeY: number): Port | null {
+  function addGroupPort(groupId: string, type: 'input' | 'output', relativeY: number): Port | null {
     const group = circuit.nodes.find((n) => n.id === groupId && n.type === 'group') as GroupNode | undefined;
     if (!group) return null;
+
+    // Clamp the Y position within the group bounds (leaving small padding)
+    const clampedY = Math.max(10, Math.min(relativeY, group.height - 10));
 
     const newPort: Port = {
       id: generateId(),
       nodeId: groupId,
       type,
       index: type === 'input' ? group.inputPorts.length : group.outputPorts.length,
-      position: { x: 0, y: 0 },
+      position: { x: 0, y: clampedY },
     };
 
     setCircuit(
