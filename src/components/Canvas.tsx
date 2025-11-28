@@ -116,6 +116,10 @@ export const Canvas: Component = () => {
     circuitStore.addNode(node);
   };
 
+  const handleAddGroup = () => {
+    circuitStore.createEmptyGroup({ x: 200, y: 100 + Math.random() * 200 });
+  };
+
   const handleClear = () => {
     if (confirm('Are you sure you want to clear all components?')) {
       circuitStore.clearCircuit();
@@ -510,6 +514,35 @@ export const Canvas: Component = () => {
       setHoveredGroupEdge(null);
     }
 
+    // Check if dragged node should be added to a group
+    if (isDragging() && dragNodeId()) {
+      const draggedNodeId = dragNodeId()!;
+      const draggedNode = circuitStore.circuit.nodes.find(n => n.id === draggedNodeId);
+
+      if (draggedNode && draggedNode.type !== 'group') {
+        // Check if node is inside any group
+        for (const node of circuitStore.circuit.nodes) {
+          if (node.type === 'group' && !node.collapsed) {
+            const nodeRight = draggedNode.position.x + draggedNode.width;
+            const nodeBottom = draggedNode.position.y + draggedNode.height;
+            const groupRight = node.position.x + node.width;
+            const groupBottom = node.position.y + node.height;
+
+            // Check if dragged node is completely inside the group
+            if (
+              draggedNode.position.x >= node.position.x &&
+              nodeRight <= groupRight &&
+              draggedNode.position.y >= node.position.y &&
+              nodeBottom <= groupBottom
+            ) {
+              circuitStore.addNodeToGroup(draggedNodeId, node.id);
+              break;
+            }
+          }
+        }
+      }
+    }
+
     setIsDragging(false);
     setDragNodeId(null);
     setIsResizing(false);
@@ -547,6 +580,7 @@ export const Canvas: Component = () => {
         onAddSwitch={handleAddSwitch}
         onAddLight={handleAddLight}
         onAddGate={handleAddGate}
+        onAddGroup={handleAddGroup}
         onClear={handleClear}
         onDeleteSelected={handleDeleteSelected}
         onCreateGroup={handleCreateGroup}

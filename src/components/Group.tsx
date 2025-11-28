@@ -51,6 +51,23 @@ export const Group: Component<GroupProps> = (props) => {
     props.onStartResize(props.node.id, { x: e.clientX, y: e.clientY });
   };
 
+  const handleEdgeClick = (e: PointerEvent, edge: 'left' | 'right') => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Get click position relative to SVG
+    const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
+    if (!rect) return;
+
+    // Calculate Y position in group coordinates
+    const svgY = e.clientY - rect.top;
+    const groupY = svgY - props.node.position.y;
+
+    // Add port at this Y position
+    const portType = edge === 'left' ? 'input' : 'output';
+    circuitStore.addGroupPort(props.node.id, portType, groupY);
+  };
+
   return (
     <g transform={`translate(${props.node.position.x}, ${props.node.position.y})`}>
       {/* Group boundary */}
@@ -68,6 +85,36 @@ export const Group: Component<GroupProps> = (props) => {
         onDblClick={handleDoubleClick}
         style={{ cursor: 'move' }}
       />
+
+      {/* Clickable edges for adding ports - only show when not collapsed */}
+      {!props.node.collapsed && (
+        <>
+          {/* Left edge - for input ports */}
+          <rect
+            x={-5}
+            y={0}
+            width={10}
+            height={props.node.height}
+            fill="transparent"
+            stroke="rgba(74, 222, 128, 0.3)"
+            stroke-width={2}
+            style={{ cursor: 'pointer' }}
+            onPointerDown={(e) => handleEdgeClick(e, 'left')}
+          />
+          {/* Right edge - for output ports */}
+          <rect
+            x={props.node.width - 5}
+            y={0}
+            width={10}
+            height={props.node.height}
+            fill="transparent"
+            stroke="rgba(248, 113, 113, 0.3)"
+            stroke-width={2}
+            style={{ cursor: 'pointer' }}
+            onPointerDown={(e) => handleEdgeClick(e, 'right')}
+          />
+        </>
+      )}
 
       {/* Group label */}
       <text

@@ -6,6 +6,7 @@ interface ToolbarProps {
   onAddSwitch: () => void;
   onAddLight: () => void;
   onAddGate: (gateType: GateType) => void;
+  onAddGroup: () => void;
   onClear: () => void;
   onDeleteSelected: () => void;
   onCreateGroup: () => void;
@@ -82,13 +83,17 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
 
       <div class="toolbar-section">
         <h3>Groups</h3>
+        <button class="toolbar-btn add-group-btn" onClick={props.onAddGroup}>
+          <span class="btn-icon">📦</span>
+          Add Group
+        </button>
         <button
           class={`toolbar-btn group-btn ${props.selectedCount >= 2 ? 'highlighted' : ''}`}
           onClick={props.onCreateGroup}
           title={props.selectedCount < 2 ? 'Select 2+ components first (Ctrl/Cmd+Click)' : `Group ${props.selectedCount} selected components`}
         >
-          <span class="btn-icon">📦</span>
-          Group {props.selectedCount >= 2 ? `(${props.selectedCount})` : ''}
+          <span class="btn-icon">🗂️</span>
+          Group Selected {props.selectedCount >= 2 ? `(${props.selectedCount})` : ''}
         </button>
         <button class="toolbar-btn ungroup-btn" onClick={props.onUngroup}>
           <span class="btn-icon">📤</span>
