@@ -1,4 +1,4 @@
-# CLAUDE.md - AI Assistant Guide for Logic Gate Simulator
+# AGENTS.md - AI Assistant Guide for Logic Gate Simulator
 
 > **Purpose**: This document provides comprehensive context for AI assistants (like Claude) working with this codebase. It explains the architecture, development workflows, key conventions, and common tasks to enable effective AI-assisted development.
 
@@ -1143,7 +1143,7 @@ npx serve dist
 - [ ] Call `propagateSignals()` if circuit logic changes
 - [ ] Test manually with dev server
 - [ ] Consider backward compatibility for import/export
-- [ ] Update this CLAUDE.md if adding major features
+- [ ] Update this AGENTS.md if adding major features
 
 ### When Fixing Bugs
 
@@ -1254,7 +1254,7 @@ setCircuit(produce(draft => {
 - **README.md** - User-facing documentation and features
 - **ARCHITECTURE.md** - Deep technical details and design decisions
 - **.cursorrules** - Development guidelines for AI assistants (focused on code patterns)
-- **This file (CLAUDE.md)** - Comprehensive AI assistant guide
+- **This file (AGENTS.md)** - Comprehensive AI assistant guide
 
 ### Example Files
 
