@@ -36,6 +36,9 @@ export const Canvas: Component = () => {
   // Group edge hover state (for creating ports)
   const [hoveredGroupEdge, setHoveredGroupEdge] = createSignal<{ groupId: string; edge: 'left' | 'right'; y: number } | null>(null);
 
+  // Groups that were auto-expanded during wire drawing so we can restore their state
+  const [autoExpandedGroups, setAutoExpandedGroups] = createSignal<Set<string>>(new Set<string>());
+
   // Group resize state
   const [isResizing, setIsResizing] = createSignal(false);
   const [resizeGroupId, setResizeGroupId] = createSignal<string | null>(null);
@@ -75,6 +78,38 @@ export const Canvas: Component = () => {
     };
   };
 
+  const collapseAutoExpandedGroups = () => {
+    if (autoExpandedGroups().size === 0) return;
+    const ids = Array.from(autoExpandedGroups());
+    ids.forEach(id => circuitStore.setGroupCollapse(id, true));
+    setAutoExpandedGroups(new Set<string>());
+  };
+
+  const clearWireInteraction = () => {
+    setWireStart(null);
+    collapseAutoExpandedGroups();
+  };
+
+  const ensureGroupExpandedForWiring = (point: Position) => {
+    for (const node of circuitStore.circuit.nodes) {
+      if (node.type === 'group' && node.collapsed) {
+        const withinX = point.x >= node.position.x && point.x <= node.position.x + node.width;
+        const withinY = point.y >= node.position.y && point.y <= node.position.y + node.height;
+
+        if (withinX && withinY) {
+          circuitStore.setGroupCollapse(node.id, false);
+          setAutoExpandedGroups(prev => {
+            if (prev.has(node.id)) return prev;
+            const next = new Set(prev);
+            next.add(node.id);
+            return next;
+          });
+          break;
+        }
+      }
+    }
+  };
+  
   const clampZoom = (value: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
 
   const handlePointerDown = (e: PointerEvent) => {
@@ -317,7 +352,7 @@ export const Canvas: Component = () => {
     } else {
       // Complete the wire
       circuitStore.addWire(currentWireStart.port.id, portId);
-      setWireStart(null);
+      clearWireInteraction();
     }
   };
 
@@ -386,6 +421,7 @@ export const Canvas: Component = () => {
 
     // Check if hovering over a group edge while drawing wire
     if (wireStart()) {
+      ensureGroupExpandedForWiring(point);
       const edgeThreshold = 20; // pixels from edge to trigger
       let foundEdge = false;
 
@@ -419,6 +455,7 @@ export const Canvas: Component = () => {
       }
     } else {
       setHoveredGroupEdge(null);
+      collapseAutoExpandedGroups();
     }
 
     // Update selection box if active
@@ -515,7 +552,7 @@ export const Canvas: Component = () => {
           // Just a click on empty space - clear selection unless Ctrl/Cmd is pressed
           if (!e.ctrlKey && !e.metaKey) {
             circuitStore.clearSelection();
-            setWireStart(null);
+            clearWireInteraction();
           }
         } else {
           // Actual drag - find all nodes within the selection box
@@ -567,7 +604,7 @@ export const Canvas: Component = () => {
         circuitStore.addWire(currentWireStart.port.id, newPort.id);
       }
 
-      setWireStart(null);
+      clearWireInteraction();
       setHoveredGroupEdge(null);
     }
 
@@ -618,7 +655,7 @@ export const Canvas: Component = () => {
       }
     }
     if (e.key === 'Escape') {
-      setWireStart(null);
+      clearWireInteraction();
       circuitStore.clearSelection();
     }
   };

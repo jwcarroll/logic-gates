@@ -1,11 +1,10 @@
 import type { Component } from 'solid-js';
 import { For, Show } from 'solid-js';
-import type { GateNode, GroupNode, LightNode, Position, SwitchNode } from '../types/circuit';
+import type { GateNode, GroupNode, LightNode, Position, SwitchNode, Wire as WireType } from '../types/circuit';
 import { circuitStore } from '../store/circuitStore';
 import { Switch } from './Switch';
 import { Light } from './Light';
 import { Gate } from './Gate';
-import { Wire } from './Wire';
 
 interface GroupProps {
   node: GroupNode;
@@ -16,6 +15,11 @@ interface GroupProps {
 }
 
 export const Group: Component<GroupProps> = (props) => {
+  const internalWires = () => circuitStore.circuit.wires.filter(wire =>
+    props.node.childNodeIds.includes(wire.fromNodeId) &&
+    props.node.childNodeIds.includes(wire.toNodeId)
+  );
+
   const handlePointerDown = (e: PointerEvent) => {
     e.stopPropagation();
 
@@ -42,6 +46,60 @@ export const Group: Component<GroupProps> = (props) => {
   const handleDoubleClick = (e: MouseEvent) => {
     e.stopPropagation();
     circuitStore.toggleGroupCollapse(props.node.id);
+  };
+
+  const getRelativePortPosition = (portId: string) => {
+    const port = circuitStore.findPort(portId);
+    if (!port) return { x: 0, y: 0 };
+    const absolute = circuitStore.getPortPosition(port);
+    return {
+      x: absolute.x - props.node.position.x,
+      y: absolute.y - props.node.position.y,
+    };
+  };
+
+  const GroupWire: Component<{ wire: WireType; collapsed: boolean }> = (wireProps) => {
+    const fromPos = () => getRelativePortPosition(wireProps.wire.fromPortId);
+    const toPos = () => getRelativePortPosition(wireProps.wire.toPortId);
+    const isActive = () => circuitStore.getWireState(wireProps.wire);
+
+    const pathD = () => {
+      const from = fromPos();
+      const to = toPos();
+      const midX = (from.x + to.x) / 2;
+      return `M ${from.x} ${from.y} C ${midX} ${from.y}, ${midX} ${to.y}, ${to.x} ${to.y}`;
+    };
+
+    const handleContext = (e: MouseEvent) => {
+      if (e.button === 2 && !wireProps.collapsed) {
+        e.preventDefault();
+        circuitStore.removeWire(wireProps.wire.id);
+      }
+    };
+
+    const stroke = () => isActive() ? '#4ade80' : '#6b7280';
+    const dash = () => wireProps.collapsed ? '6,6' : undefined;
+
+    return (
+      <g class="wire" onContextMenu={handleContext} pointer-events={wireProps.collapsed ? 'none' : undefined}>
+        <path
+          d={pathD()}
+          fill="none"
+          stroke="transparent"
+          stroke-width={12}
+        />
+        <path
+          d={pathD()}
+          fill="none"
+          stroke={stroke()}
+          stroke-width={wireProps.collapsed ? 2 : 3}
+          stroke-linecap="round"
+          stroke-dasharray={dash()}
+          opacity={wireProps.collapsed ? 0.8 : 1}
+          class={isActive() ? 'wire-active' : 'wire-inactive'}
+        />
+      </g>
+    );
   };
 
   const handleResizeStart = (e: PointerEvent) => {
@@ -143,20 +201,15 @@ export const Group: Component<GroupProps> = (props) => {
         </text>
       )}
 
-      {/* Child nodes - only render when expanded */}
-      <Show when={!props.node.collapsed}>
-        <g class="group-children">
-          {/* Internal wires (between child nodes) */}
-          <For each={circuitStore.circuit.wires.filter(wire =>
-            props.node.childNodeIds.includes(wire.fromNodeId) &&
-            props.node.childNodeIds.includes(wire.toNodeId)
-          )}>
-            {(wire) => (
-              <Wire wire={wire} onDelete={(id) => circuitStore.removeWire(id)} />
-            )}
-          </For>
+      {/* Child nodes and internal wires */}
+      <g class="group-children">
+        <For each={internalWires()}>
+          {(wire) => (
+            <GroupWire wire={wire} collapsed={props.node.collapsed} />
+          )}
+        </For>
 
-          {/* Child nodes */}
+        <Show when={!props.node.collapsed}>
           <For each={props.node.childNodeIds}>
             {(childId) => {
               const childNode = () => circuitStore.circuit.nodes.find(n => n.id === childId);
@@ -211,7 +264,21 @@ export const Group: Component<GroupProps> = (props) => {
               return null;
             }}
           </For>
-        </g>
+        </Show>
+      </g>
+
+      {/* Internal wire summary while collapsed */}
+      <Show when={props.node.collapsed && internalWires().length > 0}>
+        <text
+          x={props.node.width / 2}
+          y={props.node.height - 12}
+          text-anchor="middle"
+          fill="#9ca3af"
+          font-size="12"
+          pointer-events="none"
+        >
+          {internalWires().length} internal connection{internalWires().length === 1 ? '' : 's'}
+        </text>
       </Show>
 
       {/* Input ports */}
