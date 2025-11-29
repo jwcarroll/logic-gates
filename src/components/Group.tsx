@@ -77,7 +77,7 @@ export const Group: Component<GroupProps> = (props) => {
       }
     };
 
-    const stroke = () => wireProps.collapsed ? '#94a3b8' : (isActive() ? '#4ade80' : '#6b7280');
+    const stroke = () => isActive() ? '#4ade80' : '#6b7280';
     const dash = () => wireProps.collapsed ? '6,6' : undefined;
 
     return (
@@ -96,6 +96,7 @@ export const Group: Component<GroupProps> = (props) => {
           stroke-linecap="round"
           stroke-dasharray={dash()}
           opacity={wireProps.collapsed ? 0.8 : 1}
+          class={isActive() ? 'wire-active' : 'wire-inactive'}
         />
       </g>
     );
