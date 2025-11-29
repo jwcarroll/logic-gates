@@ -652,6 +652,77 @@ export const Gate: Component<GateProps> = (props) => {
 | Event Handlers | `handle` prefix | `handlePointerDown`, `handlePortClick` |
 | File Names | PascalCase for components | `Canvas.tsx`, `Gate.tsx` |
 
+### Git Commit Conventions
+
+**This repository uses [Conventional Commits](https://www.conventionalcommits.org/) for semantic-release automation.**
+
+**Commit Message Format:**
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Types (required):**
+
+| Type | Description | Triggers Release |
+|------|-------------|------------------|
+| `feat` | New feature | Minor version bump |
+| `fix` | Bug fix | Patch version bump |
+| `docs` | Documentation only | No release |
+| `style` | Code style (formatting, semicolons) | No release |
+| `refactor` | Code refactoring (no feature/fix) | No release |
+| `perf` | Performance improvement | Patch version bump |
+| `test` | Adding/updating tests | No release |
+| `chore` | Maintenance tasks | No release |
+| `ci` | CI/CD changes | No release |
+
+**Breaking Changes:**
+
+Add `BREAKING CHANGE:` in the footer or `!` after the type to trigger a major version bump:
+
+```
+feat!: remove deprecated API endpoint
+
+BREAKING CHANGE: The /api/v1/legacy endpoint has been removed.
+```
+
+**Examples:**
+
+```bash
+# Feature (triggers minor release: 1.0.0 → 1.1.0)
+git commit -m "feat(gates): add IMPLY gate type"
+
+# Bug fix (triggers patch release: 1.1.0 → 1.1.1)
+git commit -m "fix(propagation): correct signal evaluation for XOR gates"
+
+# Documentation (no release)
+git commit -m "docs: update README with new gate types"
+
+# Breaking change (triggers major release: 1.1.1 → 2.0.0)
+git commit -m "feat!: change circuit JSON format to v2"
+```
+
+**Scope (optional):** Use to specify the area of change:
+- `gates` - Logic gate components
+- `wires` - Wire connections
+- `canvas` - Canvas interactions
+- `toolbar` - Toolbar UI
+- `store` - State management
+- `import` / `export` - Circuit serialization
+- `touch` - Touch/mobile support
+
+**AI Assistants Must:**
+- ✅ Always use conventional commit format
+- ✅ Choose the appropriate type based on the change
+- ✅ Use imperative mood in descriptions ("add feature" not "added feature")
+- ✅ Keep the first line under 72 characters
+- ❌ Never use generic messages like "update code" or "fix bug"
+- ❌ Never combine unrelated changes in a single commit
+
 ### Wire Connection Rules
 
 **Enforced Constraints:**
