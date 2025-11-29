@@ -16,6 +16,8 @@ permissions:
 
 jobs:
   release:
+    concurrency:
+      group: release-${{ github.ref }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
