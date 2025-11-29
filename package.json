@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "test": "npm run build:tests && node --test dist-tests/tests/**/*.test.js",
+    "build:tests": "tsc -p tsconfig.tests.json"
   },
   "dependencies": {
     "solid-js": "^1.9.10"

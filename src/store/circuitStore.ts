@@ -15,6 +15,7 @@ import type {
   CanvasState,
 } from '../types/circuit';
 import { generateId } from '../utils/helpers';
+import { LayoutSyncService } from '../application/LayoutSyncService';
 
 const GATE_WIDTH = 80;
 const GATE_HEIGHT = 60;
@@ -100,6 +101,8 @@ function evaluateGate(gateType: GateType, inputs: boolean[]): boolean {
 }
 
 function createCircuitStore() {
+  let layoutSyncService = LayoutSyncService.createWithLocalAdapter();
+
   const [circuit, setCircuit] = createStore<Circuit>({
     nodes: [],
     wires: [],
@@ -122,10 +125,30 @@ function createCircuitStore() {
     zoom: 1,
   });
 
+  const persistLayout = () => {
+    void layoutSyncService.syncOnChange({
+      nodes: circuit.nodes,
+      wires: circuit.wires,
+    });
+  };
+
+  const setLayoutSyncService = (service: LayoutSyncService) => {
+    layoutSyncService = service;
+  };
+
+  const restoreLayout = async () => {
+    const saved = await layoutSyncService.restore();
+    if (saved) {
+      setCircuit(saved);
+      propagateSignals();
+    }
+  };
+
   const [selectedNodeIds, setSelectedNodeIds] = createStore<{ ids: string[] }>({ ids: [] });
 
   function addNode(node: CircuitNode) {
     setCircuit('nodes', (nodes) => [...nodes, node]);
+    persistLayout();
   }
 
   function removeNode(nodeId: string) {
@@ -136,6 +159,7 @@ function createCircuitStore() {
       })
     );
     propagateSignals();
+    persistLayout();
   }
 
   function updateNodePosition(nodeId: string, position: Position) {
@@ -145,6 +169,7 @@ function createCircuitStore() {
       'position',
       position
     );
+    persistLayout();
   }
 
   function toggleSwitch(nodeId: string) {
@@ -155,6 +180,7 @@ function createCircuitStore() {
       (state: boolean) => !state
     );
     propagateSignals();
+    persistLayout();
   }
 
   function addWire(fromPortId: string, toPortId: string): boolean {
@@ -211,12 +237,14 @@ function createCircuitStore() {
 
     setCircuit('wires', (wires) => [...wires, wire]);
     propagateSignals();
+    persistLayout();
     return true;
   }
 
   function removeWire(wireId: string) {
     setCircuit('wires', (wires) => wires.filter((w) => w.id !== wireId));
     propagateSignals();
+    persistLayout();
   }
 
   function findPort(portId: string): Port | null {
@@ -455,6 +483,7 @@ function createCircuitStore() {
 
   function clearCircuit() {
     setCircuit({ nodes: [], wires: [] });
+    persistLayout();
   }
 
   function exportCircuit(): string {
@@ -506,6 +535,7 @@ function createCircuitStore() {
       // Import the circuit
       setCircuit(data.circuit);
       propagateSignals();
+      persistLayout();
 
       return { success: true };
     } catch (error) {
@@ -592,6 +622,7 @@ function createCircuitStore() {
 
     clearSelection();
     setSelection([groupId]);
+    persistLayout();
     return groupId;
   }
 
@@ -615,6 +646,7 @@ function createCircuitStore() {
 
     // Select the ungrouped nodes
     setSelection(group.childNodeIds);
+    persistLayout();
   }
 
   function toggleGroupCollapse(groupId: string) {
@@ -624,6 +656,7 @@ function createCircuitStore() {
       'collapsed' as any,
       (collapsed: boolean) => !collapsed
     );
+    persistLayout();
   }
 
   function setGroupCollapse(groupId: string, collapsed: boolean) {
@@ -633,6 +666,7 @@ function createCircuitStore() {
       'collapsed' as any,
       () => collapsed
     );
+    persistLayout();
   }
 
   function cloneGroup(groupId: string): string | null {
@@ -748,6 +782,7 @@ function createCircuitStore() {
 
     propagateSignals();
     setSelection([newGroupId]);
+    persistLayout();
     return newGroupId;
   }
 
@@ -767,6 +802,7 @@ function createCircuitStore() {
         }
       })
     );
+    persistLayout();
   }
 
   function addGroupPort(groupId: string, type: 'input' | 'output', relativeY: number): Port | null {
@@ -797,6 +833,7 @@ function createCircuitStore() {
       })
     );
 
+    persistLayout();
     return newPort;
   }
 
@@ -823,6 +860,7 @@ function createCircuitStore() {
     );
 
     propagateSignals();
+    persistLayout();
     return true;
   }
 
@@ -844,6 +882,7 @@ function createCircuitStore() {
       })
     );
 
+    persistLayout();
     return true;
   }
 
@@ -869,6 +908,7 @@ function createCircuitStore() {
     );
 
     setSelection([groupId]);
+    persistLayout();
     return groupId;
   }
 
@@ -893,6 +933,7 @@ function createCircuitStore() {
       })
     );
 
+    persistLayout();
     return true;
   }
 
@@ -911,6 +952,7 @@ function createCircuitStore() {
       })
     );
 
+    persistLayout();
     return true;
   }
 
@@ -920,6 +962,8 @@ function createCircuitStore() {
     wireDrawState,
     canvasState,
     selectedNodeIds,
+    restoreLayout,
+    setLayoutSyncService,
     setDragState,
     setWireDrawState,
     setCanvasState,

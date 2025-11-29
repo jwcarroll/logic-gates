@@ -688,6 +688,7 @@ export const Canvas: Component = () => {
   };
 
   onMount(() => {
+    void circuitStore.restoreLayout();
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
   });
