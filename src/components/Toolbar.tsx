@@ -17,6 +17,8 @@ interface ToolbarProps {
   onImport: (file: File) => void;
   hasSelection: boolean;
   selectedCount: number;
+  activeTool: 'select' | 'pan';
+  onToolChange: (tool: 'select' | 'pan') => void;
 }
 
 export const Toolbar: Component<ToolbarProps> = (props) => {
@@ -49,6 +51,27 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
           <span>{isCollapsed() ? '▼' : '▲'}</span>
           {isCollapsed() ? 'Show Tools' : 'Hide Tools'}
         </button>
+      </div>
+
+      <div class="toolbar-section">
+        <h3>Tools</h3>
+        <div class="tool-buttons">
+          <button
+            class={`toolbar-btn tool-btn ${props.activeTool === 'select' ? 'active' : ''}`}
+            onClick={() => props.onToolChange('select')}
+          >
+            <span class="btn-icon">🖱️</span>
+            Select
+          </button>
+          <button
+            class={`toolbar-btn tool-btn ${props.activeTool === 'pan' ? 'active' : ''}`}
+            onClick={() => props.onToolChange('pan')}
+          >
+            <span class="btn-icon">✋</span>
+            Hand
+          </button>
+        </div>
+        <div class="tool-hint">Hold Space or right-click drag to pan</div>
       </div>
 
       <div class="toolbar-section">
@@ -155,6 +178,7 @@ export const Toolbar: Component<ToolbarProps> = (props) => {
           <li>Tap switch to toggle ON/OFF</li>
           <li><strong>Drag on canvas to select multiple</strong></li>
           <li>Ctrl/Cmd+Click for additional selection</li>
+          <li>Hold Space or use Hand tool/right-drag to pan</li>
           <li>Select 2+ and click Group to combine</li>
           <li>Double-click group to collapse/expand</li>
           <li>Delete key to remove selected</li>

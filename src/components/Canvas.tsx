@@ -15,6 +15,11 @@ interface ActivePointer {
   y: number;
 }
 
+type ToolMode = 'select' | 'pan';
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
+
 export const Canvas: Component = () => {
   let svgRef: SVGSVGElement | undefined;
   const [wireStart, setWireStart] = createSignal<{ port: Port; pos: Position } | null>(null);
@@ -46,7 +51,10 @@ export const Canvas: Component = () => {
   const [activePointers, setActivePointers] = createSignal<ActivePointer[]>([]);
   const [lastPinchDistance, setLastPinchDistance] = createSignal<number | null>(null);
   const [lastPinchCenter, setLastPinchCenter] = createSignal<Position | null>(null);
-  const [isPanning, setIsPanning] = createSignal(false);
+  const [panMode, setPanMode] = createSignal<'gesture' | 'mouse' | null>(null);
+  const [lastPanPoint, setLastPanPoint] = createSignal<Position | null>(null);
+  const [activeTool, setActiveTool] = createSignal<ToolMode>('select');
+  const [isSpacePressed, setIsSpacePressed] = createSignal(false);
 
   const getSvgPoint = (e: PointerEvent | MouseEvent): Position => {
     if (!svgRef) return { x: 0, y: 0 };
@@ -101,36 +109,51 @@ export const Canvas: Component = () => {
       }
     }
   };
+  
+  const clampZoom = (value: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
 
   const handlePointerDown = (e: PointerEvent) => {
-    // Track this pointer
     const pointer: ActivePointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
-    setActivePointers(prev => [...prev.filter(p => p.id !== e.pointerId), pointer]);
+    const nextPointers = [...activePointers().filter(p => p.id !== e.pointerId), pointer];
+    setActivePointers(nextPointers);
 
-    const pointers = activePointers();
-    if (pointers.length >= 2) {
+    if (nextPointers.length >= 2) {
       // Two fingers down - start pan/pinch gesture
-      setIsPanning(true);
+      setPanMode('gesture');
       setIsDragging(false);
       setDragNodeId(null);
-      const [p1, p2] = pointers;
+      const [p1, p2] = nextPointers;
       setLastPinchDistance(getDistance(p1, p2));
       setLastPinchCenter(getMidpoint(p1, p2));
-    } else {
-      // Check if clicking on a circuit node (components call stopPropagation, so this means we clicked on empty space)
-      // This will be true for clicks on background, grid, or transform group - all non-interactive elements
-      const target = e.target as Element;
-      const isClickingOnNode = target.classList?.contains('circuit-node') ||
-                                target.closest('.circuit-node') ||
-                                target.classList?.contains('port-touch-target');
+      return;
+    }
 
-      if (!isClickingOnNode) {
-        // Clicking on canvas background - start selection box
-        const point = getSvgPoint(e);
-        setSelectionBoxStart(point);
-        setSelectionBoxEnd(point);
-        setIsSelectingBox(true);
-      }
+    const shouldPan = (activeTool() === 'pan' || isSpacePressed() || e.button === 2) && e.pointerType !== 'touch';
+    if (shouldPan) {
+      e.preventDefault();
+      setPanMode('mouse');
+      setLastPanPoint({ x: e.clientX, y: e.clientY });
+      setIsSelectingBox(false);
+      setSelectionBoxStart(null);
+      setSelectionBoxEnd(null);
+      return;
+    }
+
+    if (e.button !== 0) return;
+
+    // Check if clicking on a circuit node (components call stopPropagation, so this means we clicked on empty space)
+    // This will be true for clicks on background, grid, or transform group - all non-interactive elements
+    const target = e.target as Element;
+    const isClickingOnNode = target.classList?.contains('circuit-node') ||
+                              target.closest('.circuit-node') ||
+                              target.classList?.contains('port-touch-target');
+
+    if (!isClickingOnNode) {
+      // Clicking on canvas background - start selection box
+      const point = getSvgPoint(e);
+      setSelectionBoxStart(point);
+      setSelectionBoxEnd(point);
+      setIsSelectingBox(true);
     }
   };
 
@@ -261,6 +284,20 @@ export const Canvas: Component = () => {
     // Don't start drag if we're in a multi-touch gesture or resizing
     if (activePointers().length >= 2 || isResizing()) return;
 
+    // When panning is active (hand tool or space), start pan even when dragging on nodes
+    if (activeTool() === 'pan' || isSpacePressed()) {
+      setPanMode('mouse');
+      setLastPanPoint({ x: clientPos.x, y: clientPos.y });
+      setIsSelectingBox(false);
+      setSelectionBoxStart(null);
+      setSelectionBoxEnd(null);
+      setIsDragging(false);
+      setDragNodeId(null);
+      return;
+    }
+
+    if (panMode() !== null) return;
+
     // Calculate offset accounting for pan/zoom transform
     const node = circuitStore.circuit.nodes.find(n => n.id === nodeId);
     if (!node) return;
@@ -291,7 +328,7 @@ export const Canvas: Component = () => {
 
   const handleStartResize = (groupId: string, clientPos: Position) => {
     // Don't start resize if we're in a multi-touch gesture or dragging
-    if (activePointers().length >= 2 || isDragging()) return;
+    if (activeTool() === 'pan' || panMode() !== null || activePointers().length >= 2 || isDragging()) return;
 
     const group = circuitStore.circuit.nodes.find(n => n.id === groupId && n.type === 'group');
     if (!group || group.type !== 'group') return;
@@ -320,15 +357,17 @@ export const Canvas: Component = () => {
   };
 
   const handlePointerMove = (e: PointerEvent) => {
+    let pointers: ActivePointer[] = [];
     // Update this pointer's position in activePointers
-    setActivePointers(prev => prev.map(p =>
-      p.id === e.pointerId ? { ...p, x: e.clientX, y: e.clientY } : p
-    ));
-
-    const pointers = activePointers();
+    setActivePointers(prev => {
+      pointers = prev.map(p =>
+        p.id === e.pointerId ? { ...p, x: e.clientX, y: e.clientY } : p
+      );
+      return pointers;
+    });
 
     // Handle two-finger pan and pinch-to-zoom
-    if (pointers.length >= 2 && isPanning()) {
+    if (pointers.length >= 2 && panMode() === 'gesture') {
       const [p1, p2] = pointers;
       const currentDistance = getDistance(p1, p2);
       const currentCenter = getMidpoint(p1, p2);
@@ -339,7 +378,7 @@ export const Canvas: Component = () => {
       if (prevDistance !== null && prevCenter !== null) {
         // Calculate zoom change
         const zoomDelta = currentDistance / prevDistance;
-        const newZoom = Math.max(0.25, Math.min(4, zoom() * zoomDelta));
+        const newZoom = clampZoom(zoom() * zoomDelta);
 
         // Calculate pan change (movement of the center point)
         const panDeltaX = currentCenter.x - prevCenter.x;
@@ -366,6 +405,15 @@ export const Canvas: Component = () => {
       setLastPinchDistance(currentDistance);
       setLastPinchCenter(currentCenter);
       return; // Don't process as regular pointer move
+    }
+
+    if (panMode() === 'mouse' && lastPanPoint()) {
+      const lastPoint = lastPanPoint()!;
+      const deltaX = e.clientX - lastPoint.x;
+      const deltaY = e.clientY - lastPoint.y;
+      setPan(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+      setLastPanPoint({ x: e.clientX, y: e.clientY });
+      return;
     }
 
     const point = getSvgPoint(e);
@@ -433,7 +481,7 @@ export const Canvas: Component = () => {
       return;
     }
 
-    if (isDragging() && dragNodeId() && !isPanning()) {
+    if (isDragging() && dragNodeId() && panMode() === null) {
       const offset = dragOffset();
       const currentZoom = zoom();
       const currentPan = pan();
@@ -461,14 +509,27 @@ export const Canvas: Component = () => {
 
   const handlePointerUp = (e: PointerEvent) => {
     // Remove this pointer from tracking
-    setActivePointers(prev => prev.filter(p => p.id !== e.pointerId));
+    let remainingPointers: ActivePointer[] = [];
+    setActivePointers(prev => {
+      remainingPointers = prev.filter(p => p.id !== e.pointerId);
+      return remainingPointers;
+    });
 
-    const remainingPointers = activePointers();
-    if (remainingPointers.length < 2) {
+    if (panMode() === 'gesture' && remainingPointers.length < 2) {
       // Reset pinch state when we no longer have 2 fingers
-      setIsPanning(false);
+      setPanMode(null);
       setLastPinchDistance(null);
       setLastPinchCenter(null);
+    }
+
+    if (panMode() === 'mouse' && e.pointerType !== 'touch') {
+      setPanMode(remainingPointers.length >= 2 ? 'gesture' : null);
+      setLastPanPoint(null);
+      setIsDragging(false);
+      setDragNodeId(null);
+      setIsResizing(false);
+      setResizeGroupId(null);
+      return;
     }
 
     // Complete selection box if active
@@ -582,10 +643,10 @@ export const Canvas: Component = () => {
     setResizeGroupId(null);
   };
 
-  // Note: Selection clearing is now handled in handlePointerUp to work with selection box
-  // This prevents interference between click and selection box logic
-
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === ' ') {
+      setIsSpacePressed(true);
+    }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const ids = circuitStore.selectedNodeIds.ids;
       if (ids.length > 0) {
@@ -599,12 +660,41 @@ export const Canvas: Component = () => {
     }
   };
 
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === ' ') {
+      setIsSpacePressed(false);
+    }
+  };
+
+  const handleWheel = (e: WheelEvent) => {
+    if (!svgRef) return;
+    e.preventDefault();
+
+    const rect = svgRef.getBoundingClientRect();
+    const currentZoom = zoom();
+    const zoomFactor = Math.exp(-e.deltaY * 0.001);
+    const newZoom = clampZoom(currentZoom * zoomFactor);
+
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
+    const currentPan = pan();
+    const scale = newZoom / currentZoom;
+
+    const newPanX = cursorX - (cursorX - currentPan.x) * scale;
+    const newPanY = cursorY - (cursorY - currentPan.y) * scale;
+
+    setPan({ x: newPanX, y: newPanY });
+    setZoom(newZoom);
+  };
+
   onMount(() => {
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
   });
 
   onCleanup(() => {
     window.removeEventListener('keydown', handleKeyDown);
+    window.removeEventListener('keyup', handleKeyUp);
   });
 
   return (
@@ -624,6 +714,8 @@ export const Canvas: Component = () => {
         onImport={handleImport}
         hasSelection={circuitStore.selectedNodeIds.ids.length > 0}
         selectedCount={circuitStore.selectedNodeIds.ids.length}
+        activeTool={activeTool()}
+        onToolChange={setActiveTool}
       />
       <div class="canvas-container">
         <svg
@@ -634,7 +726,12 @@ export const Canvas: Component = () => {
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          style={{ "touch-action": "none" }}
+          onWheel={handleWheel}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{
+            "touch-action": "none",
+            cursor: panMode() === 'mouse' ? 'grabbing' : activeTool() === 'pan' ? 'grab' : 'default',
+          }}
         >
           {/* Grid pattern */}
           <defs>
