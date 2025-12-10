@@ -1,0 +1,86 @@
+import type { FC } from 'react'
+import { Handle, Position, type NodeProps } from 'reactflow'
+
+interface LogicNodeData {
+  label: string
+  meta?: string
+  inputs: string[]
+  outputs: string[]
+  kind: 'switch' | 'gate' | 'light' | 'group'
+  gateType?: string
+  switchState?: boolean
+  lightState?: boolean
+  inputStates: Record<string, boolean | undefined>
+  outputStates: Record<string, boolean | undefined>
+  onToggle?: () => void
+}
+
+export const LogicNode: FC<NodeProps<LogicNodeData>> = ({ data, selected }) => {
+  const inputStyle = (idx: number) => ({
+    top: `${((idx + 1) / (data.inputs.length + 1)) * 100}%`,
+  })
+  const outputStyle = (idx: number) => ({
+    top: `${((idx + 1) / (data.outputs.length + 1)) * 100}%`,
+  })
+
+  const renderHeader = () => (
+    <div className="logic-node__label">
+      <span>{data.label}</span>
+      {data.meta ? <span className="logic-node__meta">{data.meta}</span> : null}
+      {selected ? <span className="logic-node__badge">Selected</span> : null}
+    </div>
+  )
+
+  const renderBody = () => {
+    if (data.kind === 'switch') {
+      const isOn = data.switchState
+      return (
+        <button type="button" className={`logic-node__switch ${isOn ? 'logic-node__switch--on' : ''}`} onClick={data.onToggle}>
+          {isOn ? 'On' : 'Off'}
+        </button>
+      )
+    }
+    if (data.kind === 'light') {
+      const lit = data.lightState
+      return <div className={`logic-node__light ${lit ? 'logic-node__light--on' : ''}`}>{lit ? 'On' : 'Off'}</div>
+    }
+    return null
+  }
+
+  return (
+    <div className={`logic-node ${selected ? 'logic-node--selected' : ''}`}>
+      {renderHeader()}
+      <div className="logic-node__ports">
+        <div className="logic-node__ports-col">
+          {data.inputs.map((portId) => (
+            <Handle
+              key={portId}
+              id={portId}
+              type="target"
+              position={Position.Left}
+              style={inputStyle(data.inputs.indexOf(portId))}
+              className={`logic-node__handle logic-node__handle--input ${
+                data.inputStates[portId] ? 'logic-node__handle--active' : ''
+              }`}
+            />
+          ))}
+        </div>
+        <div className="logic-node__ports-col logic-node__ports-col--outputs">
+          {data.outputs.map((portId) => (
+            <Handle
+              key={portId}
+              id={portId}
+              type="source"
+              position={Position.Right}
+              style={outputStyle(data.outputs.indexOf(portId))}
+              className={`logic-node__handle logic-node__handle--output ${
+                data.outputStates[portId] ? 'logic-node__handle--active' : ''
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+      {renderBody()}
+    </div>
+  )
+}

@@ -1,77 +1,73 @@
-# Logic Gate Simulator
+# React + TypeScript + Vite
 
-An interactive web-based logic gate simulator built with SolidJS. Create, connect, and test digital logic circuits directly in your browser with support for mobile and touch devices.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Features
+Currently, two official plugins are available:
 
-- **Interactive Circuit Building**: Drag and drop logic gates, switches, and lights
-- **Multiple Gate Types**: AND, OR, NOT, NAND, NOR, XOR, XNOR
-- **Real-time Signal Propagation**: Watch signals flow through your circuits
-- **Import/Export**: Save and load circuits as JSON files
-- **Touch-Friendly**: Full support for mobile devices with pan and pinch-to-zoom
-- **Wire Management**: Click ports to create connections between components
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Quick Start
+## React Compiler
 
-```bash
-$ npm install # or pnpm install or yarn install
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-## Available Scripts
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-In the project directory, you can run:
-
-### `npm run dev`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
-
-### `npm run build`
-
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Using the Simulator
-
-1. **Add Components**: Use the toolbar to add switches (inputs), logic gates, and lights (outputs)
-2. **Connect Components**: Click on a port (circle) on one component, then click on a port on another to create a wire
-3. **Test Your Circuit**: Toggle switches to see the signals propagate through your circuit
-4. **Move Components**: Drag components to rearrange your circuit
-5. **Delete Components**: Select a component and press Delete or use the Delete Selected button
-
-### Touch Controls
-
-- **Single finger drag**: Move components
-- **Two finger pan**: Move the canvas
-- **Pinch to zoom**: Zoom in/out on the canvas
-
-### Import/Export
-
-Save your circuits as JSON files to share or reuse later:
-- Click **Export** to download your current circuit
-- Click **Import** to load a saved circuit
-
-Try importing `half-adder-example.json` to see a working half adder circuit!
-
-## Project Structure
-
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-src/
-├── components/        # UI components (Canvas, Toolbar, Gate, Switch, Light, Wire)
-├── store/            # State management (circuitStore.ts)
-├── types/            # TypeScript type definitions
-├── utils/            # Helper functions
-├── App.tsx           # Main application component
-└── index.tsx         # Application entry point
-```
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed technical documentation.
-
-## Deployment
-
-Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html)

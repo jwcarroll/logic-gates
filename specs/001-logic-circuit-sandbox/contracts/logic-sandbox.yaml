@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: Sandbox Logic Circuit Builder API (local app service)
+  version: 1.0.0
+  description: |
+    Conceptual contracts for circuit sandbox actions. Implemented client-side; endpoints
+    model user actions for planning and testing.
+servers:
+  - url: http://localhost/internal-sandbox
+paths:
+  /circuits:
+    post:
+      summary: Create a new circuit (blank or from template)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                templateId:
+                  type: string
+                  description: Optional starter/challenge template identifier
+      responses:
+        '201':
+          description: Circuit created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Circuit'
+  /circuits/{circuitId}/components:
+    post:
+      summary: Add a component (switch/gate/light/group placeholder)
+      parameters:
+        - in: path
+          name: circuitId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComponentInput'
+      responses:
+        '201':
+          description: Component added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+        '400':
+          description: Validation error (invalid component data)
+  /circuits/{circuitId}/wires:
+    post:
+      summary: Connect two ports
+      parameters:
+        - in: path
+          name: circuitId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourcePortId, targetPortId]
+              properties:
+                sourcePortId:
+                  type: string
+                targetPortId:
+                  type: string
+      responses:
+        '201':
+          description: Wire created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wire'
+        '400':
+          description: Graph invariant violation (direction, duplicate input, self-loop)
+  /circuits/{circuitId}/simulate:
+    post:
+      summary: Run simulation and return outputs/states
+      parameters:
+        - in: path
+          name: circuitId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Simulation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationResult'
+        '409':
+          description: Non-convergent within iteration cap
+  /circuits/{circuitId}/groups:
+    post:
+      summary: Create a group/subcircuit from selected components
+      parameters:
+        - in: path
+          name: circuitId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [componentIds, label]
+              properties:
+                componentIds:
+                  type: array
+                  items:
+                    type: string
+                label:
+                  type: string
+      responses:
+        '201':
+          description: Group created with exposed ports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Component'
+        '400':
+          description: Invalid selection (missing ports or wiring conflict)
+  /circuits/{circuitId}/import:
+    post:
+      summary: Import a circuit from JSON schema v1.0/v1.1 metadata
+      parameters:
+        - in: path
+          name: circuitId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CircuitImport'
+      responses:
+        '200':
+          description: Circuit replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Circuit'
+        '400':
+          description: Validation errors; state unchanged
+  /circuits/{circuitId}/export:
+    get:
+      summary: Export a circuit as schema v1.0 with optional v1.1 metadata
+      parameters:
+        - in: path
+          name: circuitId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Exported circuit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircuitExport'
+  /challenges:
+    get:
+      summary: List available challenges/examples
+      responses:
+        '200':
+          description: Challenge library
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChallengeSummary'
+  /challenges/{challengeId}/load:
+    post:
+      summary: Load a challenge as a new circuit instance
+      parameters:
+        - in: path
+          name: challengeId
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: New circuit created from challenge
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Circuit'
+components:
+  schemas:
+    Circuit:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/Component'
+        wires:
+          type: array
+          items:
+            $ref: '#/components/schemas/Wire'
+        metadata:
+          $ref: '#/components/schemas/CircuitMetadata'
+    Component:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [switch, gate, light, group]
+        position:
+          $ref: '#/components/schemas/Point'
+        size:
+          $ref: '#/components/schemas/Size'
+        data:
+          $ref: '#/components/schemas/ComponentData'
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/Port'
+    ComponentInput:
+      allOf:
+        - $ref: '#/components/schemas/Component'
+      required: [type]
+    ComponentData:
+      type: object
+      properties:
+        state:
+          type: boolean
+        gateType:
+          type: string
+          enum: [AND, OR, NOT, NAND, NOR, XOR, XNOR]
+        label:
+          type: string
+        childNodeIds:
+          type: array
+          items:
+            type: string
+    Port:
+      type: object
+      properties:
+        id:
+          type: string
+        nodeId:
+          type: string
+        kind:
+          type: string
+          enum: [input, output]
+        index:
+          type: integer
+        position:
+          $ref: '#/components/schemas/Point'
+    Wire:
+      type: object
+      properties:
+        id:
+          type: string
+        sourcePortId:
+          type: string
+        targetPortId:
+          type: string
+        sourceNodeId:
+          type: string
+        targetNodeId:
+          type: string
+    SimulationResult:
+      type: object
+      properties:
+        converged:
+          type: boolean
+        iterations:
+          type: integer
+        nodeOutputs:
+          type: object
+          additionalProperties:
+            type: boolean
+        errors:
+          type: array
+          items:
+            type: string
+    CircuitImport:
+      type: object
+      properties:
+        version:
+          type: string
+          enum: ["1.0", "1.1"]
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        metadata:
+          $ref: '#/components/schemas/CircuitMetadata'
+    CircuitExport:
+      allOf:
+        - $ref: '#/components/schemas/CircuitImport'
+    CircuitMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ChallengeSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+    Point:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+    Size:
+      type: object
+      properties:
+        width:
+          type: number
+        height:
+          type: number

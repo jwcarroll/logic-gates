@@ -1,0 +1,46 @@
+{
+  "version": "1.1",
+  "circuit": {
+    "id": "roundtrip-basic",
+    "nodes": [
+      {
+        "id": "switch-a",
+        "type": "switch",
+        "position": { "x": 80, "y": 120 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "outputPortId": "port-switch-a", "label": "A" }
+      },
+      {
+        "id": "switch-b",
+        "type": "switch",
+        "position": { "x": 80, "y": 220 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "outputPortId": "port-switch-b", "label": "B" }
+      },
+      {
+        "id": "and-gate",
+        "type": "gate",
+        "position": { "x": 320, "y": 170 },
+        "width": 140,
+        "height": 80,
+        "data": { "gateType": "AND", "inputPortIds": ["port-and-in-0", "port-and-in-1"], "outputPortId": "port-and-out" }
+      },
+      {
+        "id": "light-output",
+        "type": "light",
+        "position": { "x": 540, "y": 170 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "inputPortId": "port-light-in" }
+      }
+    ],
+    "wires": [
+      { "id": "wire-a", "source": "port-switch-a", "sourceNode": "switch-a", "target": "port-and-in-0", "targetNode": "and-gate" },
+      { "id": "wire-b", "source": "port-switch-b", "sourceNode": "switch-b", "target": "port-and-in-1", "targetNode": "and-gate" },
+      { "id": "wire-out", "source": "port-and-out", "sourceNode": "and-gate", "target": "port-light-in", "targetNode": "light-output" }
+    ]
+  },
+  "metadata": { "name": "Roundtrip AND circuit", "createdAt": "2025-01-01T00:00:00Z" }
+}

@@ -1,20 +1,31 @@
-import type { Component } from 'solid-js';
-import { Canvas } from './components/Canvas';
-import './App.css';
+import './App.css'
+import { Canvas } from './ui/components/Canvas'
+import { Toolbar } from './ui/components/Toolbar'
+import { ChallengePanel } from './ui/pages/ChallengePanel'
 
-const App: Component = () => {
-  const appVersion = import.meta.env.VITE_APP_VERSION ?? '0.0.0';
-
+function App() {
   return (
-    <div class="app">
-      <header class="app-header">
-        <h1>Logic Gate Simulator v{appVersion}</h1>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="brand">
+          <span className="brand-mark">Logic Gates</span>
+          <span className="brand-subtitle">React Flow V2</span>
+        </div>
+        <div className="header-actions">
+          <span className="header-pill">Draft spec-driven build</span>
+        </div>
       </header>
-      <main class="app-main">
-        <Canvas />
+      <main className="app-main">
+        <aside className="app-sidebar">
+          <Toolbar />
+          <ChallengePanel />
+        </aside>
+        <section className="app-canvas">
+          <Canvas />
+        </section>
       </main>
     </div>
-  );
-};
+  )
+}
 
-export default App;
+export default App

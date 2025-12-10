@@ -1,12 +1,7 @@
 import { defineConfig } from 'vite'
-import solid from 'vite-plugin-solid'
+import react from '@vitejs/plugin-react'
 
-const appVersion = process.env.VITE_APP_VERSION ?? process.env.npm_package_version ?? '0.0.0'
-
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [solid()],
-  base: process.env.BASE_URL || '/',
-  define: {
-    'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
-  },
+  plugins: [react()],
 })
