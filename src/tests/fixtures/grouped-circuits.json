@@ -1,0 +1,11 @@
+{
+  "templates": [
+    {
+      "id": "half-adder",
+      "label": "Half Adder",
+      "description": "XOR for sum, AND for carry with two exposed inputs and two outputs",
+      "nodes": ["XOR", "AND"],
+      "notes": "Used for catalog placement and reuse tests"
+    }
+  ]
+}

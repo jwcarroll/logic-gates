@@ -22,6 +22,7 @@ export interface BaseNode {
   position: Position
   width: number
   height: number
+  groupId?: string
 }
 
 export interface SwitchNode extends BaseNode {
@@ -58,6 +59,7 @@ export interface GroupNode extends BaseNode {
     inputPortIds: string[]
     outputPortIds: string[]
     collapsed: boolean
+    portMap: GroupPortMap
   }
 }
 
@@ -71,12 +73,33 @@ export interface Wire {
   targetNode: string
 }
 
+export interface CircuitMetadata {
+  name?: string
+  createdAt?: string
+}
+
 export interface Circuit {
+  id?: string
   nodes: CircuitNode[]
   wires: Wire[]
+  metadata?: CircuitMetadata
 }
 
 export interface SimulationResult {
   outputs: Record<string, boolean>
   lights: Record<string, boolean>
+  iterations: number
+  converged: boolean
+  errors?: string[]
+}
+
+export interface GroupPortMap {
+  inputs: Record<string, string> // group port id -> internal port id
+  outputs: Record<string, string> // group port id -> internal port id
+}
+
+export interface Result<T> {
+  ok: boolean
+  value?: T
+  errors?: string[]
 }

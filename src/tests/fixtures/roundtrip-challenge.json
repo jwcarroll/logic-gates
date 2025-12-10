@@ -1,0 +1,46 @@
+{
+  "version": "1.1",
+  "circuit": {
+    "id": "challenge-template-xor",
+    "nodes": [
+      {
+        "id": "ch-switch-a",
+        "type": "switch",
+        "position": { "x": 100, "y": 120 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "outputPortId": "ch-port-switch-a", "label": "Input A" }
+      },
+      {
+        "id": "ch-switch-b",
+        "type": "switch",
+        "position": { "x": 100, "y": 220 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "outputPortId": "ch-port-switch-b", "label": "Input B" }
+      },
+      {
+        "id": "ch-xor",
+        "type": "gate",
+        "position": { "x": 320, "y": 170 },
+        "width": 140,
+        "height": 80,
+        "data": { "gateType": "XOR", "inputPortIds": ["ch-port-xor-in-0", "ch-port-xor-in-1"], "outputPortId": "ch-port-xor-out" }
+      },
+      {
+        "id": "ch-light",
+        "type": "light",
+        "position": { "x": 540, "y": 170 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "inputPortId": "ch-port-light-in" }
+      }
+    ],
+    "wires": [
+      { "id": "ch-wire-a", "source": "ch-port-switch-a", "sourceNode": "ch-switch-a", "target": "ch-port-xor-in-0", "targetNode": "ch-xor" },
+      { "id": "ch-wire-b", "source": "ch-port-switch-b", "sourceNode": "ch-switch-b", "target": "ch-port-xor-in-1", "targetNode": "ch-xor" },
+      { "id": "ch-wire-out", "source": "ch-port-xor-out", "sourceNode": "ch-xor", "target": "ch-port-light-in", "targetNode": "ch-light" }
+    ]
+  },
+  "metadata": { "name": "Roundtrip XOR challenge", "createdAt": "2025-01-02T00:00:00Z" }
+}

@@ -1,5 +1,5 @@
 import type { FC } from 'react'
-import { Handle, Position } from 'reactflow'
+import { Handle, Position, type NodeProps } from 'reactflow'
 
 interface LogicNodeData {
   label: string
@@ -15,15 +15,19 @@ interface LogicNodeData {
   onToggle?: () => void
 }
 
-interface Props {
-  data: LogicNodeData
-}
+export const LogicNode: FC<NodeProps<LogicNodeData>> = ({ data, selected }) => {
+  const inputStyle = (idx: number) => ({
+    top: `${((idx + 1) / (data.inputs.length + 1)) * 100}%`,
+  })
+  const outputStyle = (idx: number) => ({
+    top: `${((idx + 1) / (data.outputs.length + 1)) * 100}%`,
+  })
 
-export const LogicNode: FC<Props> = ({ data }) => {
   const renderHeader = () => (
     <div className="logic-node__label">
       <span>{data.label}</span>
       {data.meta ? <span className="logic-node__meta">{data.meta}</span> : null}
+      {selected ? <span className="logic-node__badge">Selected</span> : null}
     </div>
   )
 
@@ -31,11 +35,7 @@ export const LogicNode: FC<Props> = ({ data }) => {
     if (data.kind === 'switch') {
       const isOn = data.switchState
       return (
-        <button
-          type="button"
-          className={`logic-node__switch ${isOn ? 'logic-node__switch--on' : ''}`}
-          onClick={data.onToggle}
-        >
+        <button type="button" className={`logic-node__switch ${isOn ? 'logic-node__switch--on' : ''}`} onClick={data.onToggle}>
           {isOn ? 'On' : 'Off'}
         </button>
       )
@@ -48,7 +48,7 @@ export const LogicNode: FC<Props> = ({ data }) => {
   }
 
   return (
-    <div className="logic-node">
+    <div className={`logic-node ${selected ? 'logic-node--selected' : ''}`}>
       {renderHeader()}
       <div className="logic-node__ports">
         <div className="logic-node__ports-col">
@@ -58,6 +58,7 @@ export const LogicNode: FC<Props> = ({ data }) => {
               id={portId}
               type="target"
               position={Position.Left}
+              style={inputStyle(data.inputs.indexOf(portId))}
               className={`logic-node__handle logic-node__handle--input ${
                 data.inputStates[portId] ? 'logic-node__handle--active' : ''
               }`}
@@ -71,6 +72,7 @@ export const LogicNode: FC<Props> = ({ data }) => {
               id={portId}
               type="source"
               position={Position.Right}
+              style={outputStyle(data.outputs.indexOf(portId))}
               className={`logic-node__handle logic-node__handle--output ${
                 data.outputStates[portId] ? 'logic-node__handle--active' : ''
               }`}

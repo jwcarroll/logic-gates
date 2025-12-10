@@ -1,6 +1,7 @@
 import './App.css'
 import { Canvas } from './ui/components/Canvas'
 import { Toolbar } from './ui/components/Toolbar'
+import { ChallengePanel } from './ui/pages/ChallengePanel'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
       <main className="app-main">
         <aside className="app-sidebar">
           <Toolbar />
+          <ChallengePanel />
         </aside>
         <section className="app-canvas">
           <Canvas />

@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "circuit": {
+    "nodes": [
+      { "id": "s1", "type": "switch", "position": { "x": 0, "y": 0 }, "width": 140, "height": 80, "data": { "state": true, "outputPortId": "p1", "label": "Switch" } },
+      { "id": "g1", "type": "gate", "position": { "x": 150, "y": 0 }, "width": 140, "height": 80, "data": { "gateType": "AND", "inputPortIds": ["p2", "p3"], "outputPortId": "p4" } },
+      { "id": "l1", "type": "light", "position": { "x": 320, "y": 0 }, "width": 140, "height": 80, "data": { "state": false, "inputPortId": "p5" } }
+    ],
+    "wires": [
+      { "id": "w1", "source": "p1", "target": "p2", "sourceNode": "s1", "targetNode": "g1" },
+      { "id": "w2", "source": "p4", "target": "p5", "sourceNode": "g1", "targetNode": "l1" }
+    ]
+  }
+}
