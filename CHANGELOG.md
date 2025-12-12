@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/jwcarroll/logic-gates/compare/v1.1.0...v1.1.1) (2025-12-12)
+
+
+### Bug Fixes
+
+* **ci-cd:** fix to ensure base path is set correctly ([654b323](https://github.com/jwcarroll/logic-gates/commit/654b323e498b016742dba028e7ca50129f697fab))
+
 # [1.1.0](https://github.com/jwcarroll/logic-gates/compare/v1.0.0...v1.1.0) (2025-12-12)
 
 
