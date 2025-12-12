@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/jwcarroll/logic-gates/compare/v1.2.0...v1.2.1) (2025-12-12)
+
+
+### Bug Fixes
+
+* **ci-cd:** fix test config ([57258ff](https://github.com/jwcarroll/logic-gates/commit/57258ff17e76354e5eb1b7018f35e045778ad383))
+
 # [1.2.0](https://github.com/jwcarroll/logic-gates/compare/v1.1.1...v1.2.0) (2025-12-12)
 
 
