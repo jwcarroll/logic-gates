@@ -1,0 +1,37 @@
+name: Commitlint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - beta
+      - next
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint commits
+        run: |
+          FROM_SHA="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$FROM_SHA" ] || [ "$FROM_SHA" = "0000000000000000000000000000000000000000" ]; then
+            FROM_SHA="$(git rev-parse HEAD~1)"
+          fi
+          npx commitlint --from "$FROM_SHA" --to "${{ github.sha }}"
