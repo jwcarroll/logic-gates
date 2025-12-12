@@ -1,17 +1,41 @@
-# React + TypeScript + Vite
+# Logic Gates Playground
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interactive logic-circuit sandbox built with React Flow, TypeScript, and Vite. Sketch circuits, wire gates, and see outputs update in real time.
 
-Currently, two official plugins are available:
+## Live
+- Production: https://www.technofattie.com/logic-gates/  
+- Built from `main` via GitHub Actions → Pages (`release.yml`).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
+- Drag-and-drop gate palette (AND/OR/NOT/NAND/NOR/XOR/XNOR), switches, and lights.
+- Realtime simulation core in `src/core/` decoupled from UI.
+- Undo/redo and node wiring helpers tuned for React Flow.
+- Semantic-release powered versioning; CHANGELOG + tags auto-created from conventional commits.
 
-## Releases
+## Quick Start
+- Install: `npm install`
+- Dev server (HMR): `npm run dev` → http://localhost:5173
+- Type-check & build: `npm run build`
+- Preview prod bundle: `npm run preview`
+- Lint: `npm run lint`
+- Tests: `npm run test` (Vitest + jsdom)
 
-Automated releases are driven by [semantic-release](https://semantic-release.gitbook.io/semantic-release/) using conventional commits.
+## Release & CI
+- Conventional commits enforced (commitlint).  
+- Release workflow: `.github/workflows/release.yml`
+  - Node 22.14.0, `semantic-release` → bumps version, updates `CHANGELOG.md`, tags, and deploys Pages.
+  - Pages base path set via `BASE_URL=/logic-gates/`; `vite.config.ts` uses `base: process.env.BASE_URL ?? '/'`.
+- Local dry-run: `npx semantic-release --dry-run --no-ci`.
 
-- Branches: `main` (stable), `beta` (prerelease), `next` (rc channel).
-- Run locally with `npm run release -- --no-ci`; dry-run with `npx semantic-release --dry-run --no-ci`.
-- Requires `GITHUB_TOKEN` in the environment; npm publishing is disabled for this private package.
-- Conventional commits enforced via commitlint (husky commit-msg hook + CI check).
+## Project Structure
+- `src/main.tsx` bootstraps app; `src/App.tsx` shell/layout.
+- `src/core/` pure simulation logic and types.
+- `src/ui/` React components; shared pieces in `src/ui/components/`.
+- `src/app/` state stores/hooks; `src/design/` styling tokens.
+- Assets in `src/assets/`; static files in `public/`; tests under `src/tests/`.
+
+## Contributing
+- Follow conventional commits (e.g., `feat: add xor gate`).  
+- Run `npm run lint` and `npm run test` before pushing.  
+- PRs should note user-visible changes and include screenshots/GIFs for UI updates.
+
