@@ -33,3 +33,4 @@ auth.json
 #AI tools
 .codex/*
 .codex/history.jsonl
+.husky/_

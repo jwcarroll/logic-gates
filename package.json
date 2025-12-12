@@ -7,11 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:commits": "commitlint --from=origin/main --to=HEAD",
     "preview": "vite preview",
     "test": "vitest",
     "test:watch": "vitest watch",
     "test:e2e": "echo \"No e2e runner configured yet\" && exit 0",
-    "test:e2e:pw": "playwright test"
+    "test:e2e:pw": "playwright test",
+    "release": "semantic-release",
+    "prepare": "husky"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -20,8 +23,16 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.2.0",
+    "@commitlint/config-conventional": "^20.2.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.50.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.2",
+    "@semantic-release/npm": "^13.1.2",
+    "@semantic-release/release-notes-generator": "^14.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -33,8 +44,10 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
     "jsdom": "^27.2.0",
     "playwright": "^1.57.0",
+    "semantic-release": "^25.0.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
