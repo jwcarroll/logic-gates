@@ -41,6 +41,8 @@ jobs:
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Skip husky hooks (commitlint) for the auto-generated release commit
+          HUSKY: 0
         run: npx semantic-release
 
   build_pages:
