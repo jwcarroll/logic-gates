@@ -34,3 +34,6 @@ auth.json
 .codex/*
 .codex/history.jsonl
 .husky/_
+
+#Environment files
+.envrc
