@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/jwcarroll/logic-gates/compare/v1.1.1...v1.2.0) (2025-12-12)
+
+
+### Features
+
+* **logging:** added structured logging and version information into the app ([#31](https://github.com/jwcarroll/logic-gates/issues/31)) ([83c170d](https://github.com/jwcarroll/logic-gates/commit/83c170db2ffdd18fe2a99a2b02ff97a5ed3166dd))
+
 ## [1.1.1](https://github.com/jwcarroll/logic-gates/compare/v1.1.0...v1.1.1) (2025-12-12)
 
 
