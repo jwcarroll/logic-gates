@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/jwcarroll/logic-gates/compare/v1.2.1...v1.2.2) (2025-12-12)
+
+
+### Bug Fixes
+
+* **ci-cd:** fix the Bash syntax in the Pages build step ([3b9dc1e](https://github.com/jwcarroll/logic-gates/commit/3b9dc1eab3c18548d53ae2521fa0b65906277e9a))
+
 ## [1.2.1](https://github.com/jwcarroll/logic-gates/compare/v1.2.0...v1.2.1) (2025-12-12)
 
 
