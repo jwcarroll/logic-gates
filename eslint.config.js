@@ -19,5 +19,21 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "MemberExpression[object.type='MetaProperty'][object.meta.name='import'][object.property.name='meta'][property.name='env']",
+          message: 'Access env via loadSettings() (src/app/settings/settings.ts) instead of import.meta.env',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/app/settings/**/*'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
   },
 ])
