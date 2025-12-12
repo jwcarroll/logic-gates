@@ -1,3 +1,16 @@
+# [1.1.0](https://github.com/jwcarroll/logic-gates/compare/v1.0.0...v1.1.0) (2025-12-12)
+
+
+### Bug Fixes
+
+* **ci-cd:** fixed the issue with node ([f11402c](https://github.com/jwcarroll/logic-gates/commit/f11402cbc5f08f98ce653cab9cd5b9dd110c5425))
+* **ci-cd:** remove commit lint for release commit ([0cf9efe](https://github.com/jwcarroll/logic-gates/commit/0cf9efe6cc3ca78ddef0b706361bdf5c39a78d8a))
+
+
+### Features
+
+* **ci-cd:** added semantic release to the project ([#30](https://github.com/jwcarroll/logic-gates/issues/30)) ([c9b3b53](https://github.com/jwcarroll/logic-gates/commit/c9b3b53a0fa100a75f3457002e18e7aca0110c98))
+
 ## 1.0.0 (2025-11-29)
 
 * Claude/logic gate import export 016yme t vt puf124 q8z j4sp qg (#6) ([eae0bbd](https://github.com/jwcarroll/logic-gates/commit/eae0bbd)), closes [#6](https://github.com/jwcarroll/logic-gates/issues/6)
