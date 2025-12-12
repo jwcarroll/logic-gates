@@ -57,6 +57,14 @@
   color: #cbd5e1;
   background: rgba(148, 163, 184, 0.08);
 }
+.version-pill {
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #1e293b;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
 
 .app-main {
   display: grid;

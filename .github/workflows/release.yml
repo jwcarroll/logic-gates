@@ -60,6 +60,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Stamp build env vars
+        run: |
+          echo "VITE_APP_VERSION=$(node -p \"require('./package.json').version\")" >> \"$GITHUB_ENV\"
+          echo "VITE_APP_ENVIRONMENT=ci" >> \"$GITHUB_ENV\"
+
       - name: Build
         run: npm run build
         env:
