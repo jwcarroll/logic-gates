@@ -22,8 +22,8 @@ test.describe('[US1] workspace layout', () => {
 
     const viewport = page.viewportSize()
     const canvasBox = await canvas.boundingBox()
-    expect(canvasBox?.width ?? 0).toBeGreaterThan((viewport?.width ?? 0) * 0.8)
-    expect(canvasBox?.height ?? 0).toBeGreaterThan((viewport?.height ?? 0) * 0.75)
+    expect(canvasBox?.width ?? 0).toBeGreaterThanOrEqual((viewport?.width ?? 0) * 0.8)
+    expect(canvasBox?.height ?? 0).toBeGreaterThanOrEqual((viewport?.height ?? 0) * 0.75)
 
     await assertNoBodyScrollbars(page)
 

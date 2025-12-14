@@ -6,6 +6,8 @@ import { useAppStore } from '../../app/store'
 import { toReactFlowEdges, toReactFlowNodes } from '../../app/reactFlowAdapter'
 import { LogicNode } from './LogicNode'
 import { useSimulationSync } from '../hooks/useSimulationSync'
+import { workspaceTokens } from '../../design/tokens/workspace'
+import type { CSSProperties } from 'react'
 
 const nodeTypes: NodeTypes = {
   logicNode: LogicNode,
@@ -26,7 +28,23 @@ export const Canvas = memo(() => {
   const selectedIds = useAppStore((s) => s.selectedNodeIds)
   const [error, setError] = useState<string | null>(null)
   const { outputs, lights } = useSimulationSync(outputsRaw, lightsRaw)
-  const energizedWireState: [] = []
+  const theme = 'dark'
+  const selectionVars = workspaceTokens.selection.theme[theme]
+  const energizedVars = workspaceTokens.energized.theme[theme]
+
+  const styleVars: CSSProperties = useMemo(
+    () => ({
+      '--selection-stroke': selectionVars.stroke,
+      '--selection-fill': selectionVars.fill,
+      '--selection-glow': selectionVars.glow,
+      '--selection-handle': selectionVars.handle,
+      '--wire-base': energizedVars.base,
+      '--wire-gradient-start': energizedVars.gradient[0],
+      '--wire-gradient-end': energizedVars.gradient[1],
+      '--wire-inactive': energizedVars.inactive,
+    }),
+    [energizedVars.base, energizedVars.gradient, energizedVars.inactive, selectionVars.fill, selectionVars.glow, selectionVars.handle, selectionVars.stroke],
+  )
 
   const nodes = useMemo<Node[]>(() => toReactFlowNodes(circuit, outputs, lights, { onToggleSwitch: toggleSwitch }), [circuit, outputs, lights, toggleSwitch])
   const edges = useMemo<Edge[]>(() => toReactFlowEdges(circuit), [circuit])
@@ -68,7 +86,7 @@ export const Canvas = memo(() => {
   }
 
   return (
-    <div className="canvas-root" onDrop={handleDrop} onDragOver={handleDragOver}>
+    <div className="canvas-root" style={styleVars} onDrop={handleDrop} onDragOver={handleDragOver}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
