@@ -27,6 +27,11 @@ Polish the workspace experience so the canvas fills the shell, controls float li
 **Constraints**: Maintain contrast on light/dark themes; keep graph/selection invariants intact; avoid React Flow becoming state source; canvas must avoid scrollbars  
 **Scale/Scope**: Single workspace shell with grouped circuit drill-in; limited to polish on existing graph features (no new schema)
 
+## Implementation Notes (as built)
+
+- Group drill-in is driven by `openGroupId` in the app store and projected via the React Flow adapter (`view.groupId`); edits in drill-in mode modify the same core circuit and persist on exit.
+- Workspace selectors memoize derived arrays/objects (selection, wire view) to keep `useSyncExternalStore` snapshots stable under React 19.
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*

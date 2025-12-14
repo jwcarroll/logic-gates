@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-workspace-ui-polish`  
 **Created**: 2025-12-12  
-**Status**: Draft  
+**Status**: Implemented (in progress)  
 **Input**: User description: "I want to clean up the user interface and provide some polish so that user interactions are more intuitive, and the entire application feels more professional. - Ensure that the canvas fills up the entire workspace instead of being in a frame. I want the toolbars and menus to be elements that float on the workspace similar to how Miro works visually. - Provide better visual feedback when elements are selected - Provide a more polished visual style for wires that have current running through them - Grouped circuits should have a better way to view the internal details and edit them"
 
 **Architecture Notes**: Core logic MUST stay pure and framework-agnostic; React Flow is an adapter/view only; store/orchestration mediates between core and UI. Visual states (selection, current flow) are derived from core simulation/store state, not from view-only artifacts.
@@ -123,6 +123,11 @@ Users can open a grouped circuit to view and edit its internal components from t
 - **SC-002a**: Selection recognition accuracy logged per session remains ≥95% without hints.
 - **SC-003a**: Energized wire identification time is ≤2 seconds for ≥90% of users across sessions.
 - **SC-004a**: Group open-edit-return flow completes in <20 seconds for ≥90% of sessions (timed).
+
+### Automated Validation (current)
+
+- Playwright: `src/tests/e2e/workspace-layout.spec.ts` (SC-001 signal), `src/tests/e2e/selection-energized.spec.ts` (SC-002/SC-003 signals), `src/tests/e2e/group-drill-in.spec.ts` + `src/tests/e2e/workspace-usability.spec.ts` (SC-004a timing assertion).
+- Vitest: `src/tests/ui/workspace-visuals.test.ts` writes a stable snapshot to `src/tests/ui/__snapshots__/workspace-visuals.spec.ts.snap` and enforces minimum contrast targets for the dark workspace tokens.
 
 ## Testing Strategy *(TDD-first, mandatory)*
 

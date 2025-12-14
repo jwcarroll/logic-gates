@@ -17,6 +17,7 @@ type MeasureOptions = {
 
 const DEFAULT_BUDGET = 100
 const marks = new Map<WorkspacePerfEvent, number>()
+const lastReport = new Map<WorkspacePerfEvent, number>()
 
 const now = () => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now())
 
@@ -53,10 +54,36 @@ export const workspacePerformance = {
     return sample
   },
 
+  markEndThrottled(name: WorkspacePerfEvent, throttleMs: number, options?: MeasureOptions): WorkspacePerfSample | null {
+    const sample = this.markEnd(name, {
+      ...options,
+      reporter: (s) => {
+        const last = lastReport.get(name) ?? 0
+        const t = Date.now()
+        if (t - last < throttleMs) return
+        lastReport.set(name, t)
+        ;(options?.reporter ?? defaultReporter)(s)
+      },
+    })
+    return sample
+  },
+
   async measure<T>(name: WorkspacePerfEvent, fn: () => Promise<T> | T, options?: MeasureOptions): Promise<T> {
     this.markStart(name)
     const result = await fn()
     this.markEnd(name, options)
+    return result
+  },
+
+  async measureThrottled<T>(
+    name: WorkspacePerfEvent,
+    throttleMs: number,
+    fn: () => Promise<T> | T,
+    options?: MeasureOptions,
+  ): Promise<T> {
+    this.markStart(name)
+    const result = await fn()
+    this.markEndThrottled(name, throttleMs, options)
     return result
   },
 }

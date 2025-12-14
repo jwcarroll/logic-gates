@@ -35,8 +35,6 @@ export type GroupViewState = {
 
 const nodeLookup = (nodes: CircuitNode[]) => new Map(nodes.map((n) => [n.id, n]))
 
-const now = () => Date.now()
-
 export const selectCanvasSize = (_state: StoreState, viewport?: { width?: number; height?: number }): CanvasSize => {
   const fallbackWidth = workspaceTokens.canvas.minWidth
   const width = viewport?.width ?? (typeof window !== 'undefined' ? window.innerWidth : fallbackWidth)
@@ -50,29 +48,99 @@ export const selectCanvasSize = (_state: StoreState, viewport?: { width?: number
   }
 }
 
+let lastSelectionInput:
+  | {
+      nodes: CircuitNode[]
+      selectedNodeIds: string[]
+      selectionUpdatedAt: number
+    }
+  | undefined
+let lastSelectionOutput: SelectionState | undefined
+
 export const selectSelectionState = (state: StoreState): SelectionState => {
+  if (
+    lastSelectionInput?.nodes === state.circuit.nodes &&
+    lastSelectionInput?.selectedNodeIds === state.selectedNodeIds &&
+    lastSelectionInput?.selectionUpdatedAt === state.selectionUpdatedAt &&
+    lastSelectionOutput
+  ) {
+    return lastSelectionOutput
+  }
+
   const lookup = nodeLookup(state.circuit.nodes)
   const selectedGroups = state.selectedNodeIds.filter((id) => lookup.get(id)?.type === 'group')
   const selectedNodes = state.selectedNodeIds.filter((id) => lookup.get(id)?.type !== 'group')
 
-  return {
+  const next: SelectionState = {
     selectedNodes,
     selectedGroups,
     selectedWires: [],
     focusId: selectedNodes[0] ?? selectedGroups[0] ?? null,
-    updatedAt: now(),
+    updatedAt: state.selectionUpdatedAt,
   }
+
+  lastSelectionInput = {
+    nodes: state.circuit.nodes,
+    selectedNodeIds: state.selectedNodeIds,
+    selectionUpdatedAt: state.selectionUpdatedAt,
+  }
+  lastSelectionOutput = next
+  return next
 }
 
-export const selectWireState = (_state: StoreState): WireViewState[] => []
+let lastWireInput:
+  | {
+      wires: StoreState['circuit']['wires']
+      outputs: StoreState['outputs']
+    }
+  | undefined
+let lastWireOutput: WireViewState[] | undefined
+
+export const selectWireState = (state: StoreState): WireViewState[] => {
+  if (lastWireInput?.wires === state.circuit.wires && lastWireInput?.outputs === state.outputs && lastWireOutput) {
+    return lastWireOutput
+  }
+
+  const { circuit, outputs } = state
+  const next = circuit.wires.map((wire) => {
+    const energized = Boolean(outputs[wire.source])
+    return {
+      wireId: wire.id,
+      energized,
+      direction: energized ? 'forward' : null,
+      intensity: energized ? 1 : 0,
+    }
+  })
+
+  lastWireInput = { wires: state.circuit.wires, outputs: state.outputs }
+  lastWireOutput = next
+  return next
+}
+
+let lastGroupInput:
+  | {
+      groupId: string | null
+      nodes: CircuitNode[]
+    }
+  | undefined
+let lastGroupOutput: GroupViewState | undefined
 
 export const selectGroupView = (state: StoreState): GroupViewState => {
-  const lookup = nodeLookup(state.circuit.nodes)
-  const firstGroup = state.selectedNodeIds.find((id) => lookup.get(id)?.type === 'group') ?? null
-  return {
-    groupId: firstGroup,
-    breadcrumb: firstGroup ? ['Root', firstGroup] : [],
-    status: 'live',
-    isOpen: Boolean(firstGroup),
+  const groupId = state.openGroupId
+  if (lastGroupInput?.groupId === groupId && lastGroupInput?.nodes === state.circuit.nodes && lastGroupOutput) {
+    return lastGroupOutput
   }
+
+  const next: GroupViewState = (() => {
+    if (!groupId) {
+      return { groupId: null, breadcrumb: [], status: 'live', isOpen: false }
+    }
+    const group = state.circuit.nodes.find((n) => n.type === 'group' && n.id === groupId)
+    const label = group && group.type === 'group' ? group.data.label : groupId
+    return { groupId, breadcrumb: ['Root', label], status: 'live', isOpen: true }
+  })()
+
+  lastGroupInput = { groupId, nodes: state.circuit.nodes }
+  lastGroupOutput = next
+  return next
 }

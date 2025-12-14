@@ -1,0 +1,40 @@
+[
+  {
+    "energized": {
+      "--wire-base": "#eab308",
+      "--wire-dasharray": "14 8",
+      "--wire-flow-duration": "1200ms",
+      "--wire-gradient-end": "#f97316",
+      "--wire-gradient-start": "#f59e0b",
+      "--wire-inactive": "#cbd5e1",
+    },
+    "selection": {
+      "--selection-fill": "rgba(37, 99, 235, 0.12)",
+      "--selection-glow": "rgba(37, 99, 235, 0.35)",
+      "--selection-halo-width": "6px",
+      "--selection-handle": "#0f172a",
+      "--selection-stroke": "#2563eb",
+      "--selection-stroke-width": "3px",
+    },
+    "theme": "light",
+  },
+  {
+    "energized": {
+      "--wire-base": "#facc15",
+      "--wire-dasharray": "14 8",
+      "--wire-flow-duration": "1200ms",
+      "--wire-gradient-end": "#f97316",
+      "--wire-gradient-start": "#f59e0b",
+      "--wire-inactive": "#475569",
+    },
+    "selection": {
+      "--selection-fill": "rgba(34, 197, 94, 0.14)",
+      "--selection-glow": "rgba(34, 197, 94, 0.45)",
+      "--selection-halo-width": "6px",
+      "--selection-handle": "#e2e8f0",
+      "--selection-stroke": "#22c55e",
+      "--selection-stroke-width": "3px",
+    },
+    "theme": "dark",
+  },
+]

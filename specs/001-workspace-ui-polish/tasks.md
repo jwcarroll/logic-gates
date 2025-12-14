@@ -69,10 +69,10 @@
 ### Implementation
 
 - [X] T018 [P] [US2] Extend design tokens for selection/energized variants (light/dark) documenting WCAG AA 4.5:1 targets and ≥3:1 zoom extremes in `src/design/tokens/workspace.ts`
-- [ ] T019 [US2] Implement selection style hook bridging store to React Flow elements in `src/app/hooks/useSelectionStyles.ts`
-- [ ] T020 [US2] Implement energized wire overlay/gradient animation component in `src/ui/components/EnergizedWireOverlay.tsx`
-- [ ] T021 [US2] Wire selection and energized styles into canvas render path with 100ms budget checks in `src/ui/WorkspaceCanvas.tsx`
-- [ ] T022 [US2] Add perf instrumentation (markers + throttling) for selection/energized updates in `src/app/perf/workspacePerformance.ts`
+- [X] T019 [US2] Implement selection style hook bridging store to React Flow elements in `src/app/hooks/useSelectionStyles.ts`
+- [X] T020 [US2] Implement energized wire overlay/gradient animation component in `src/ui/components/EnergizedWireOverlay.tsx`
+- [X] T021 [US2] Wire selection and energized styles into canvas render path with 100ms budget checks in `src/ui/WorkspaceCanvas.tsx`
+- [X] T022 [US2] Add perf instrumentation (markers + throttling) for selection/energized updates in `src/app/perf/workspacePerformance.ts`
 
 **Checkpoint**: User Story 2 independently testable.
 
@@ -86,16 +86,16 @@
 
 ### Tests (write first)
 
-- [ ] T023 [P] [US3] Component test for drill-in overlay + breadcrumb/back controls in `src/tests/ui/groupOverlay.test.tsx`
-- [ ] T024 [P] [US3] Core/store sync test for group open/close and changeset persistence in `src/tests/core/groupSync.test.ts`
- - [ ] T025 [P] [US3] Playwright e2e for open-edit-exit flow with running simulation status; assert <20s completion for SC-004a in `src/tests/e2e/group-drill-in.spec.ts`
+- [X] T023 [P] [US3] Component test for drill-in overlay + breadcrumb/back controls in `src/tests/ui/groupOverlay.test.tsx`
+- [X] T024 [P] [US3] Core/store sync test for group open/close and changeset persistence in `src/tests/core/groupSync.test.ts`
+ - [X] T025 [P] [US3] Playwright e2e for open-edit-exit flow with running simulation status; assert <20s completion for SC-004a in `src/tests/e2e/group-drill-in.spec.ts`
 
 ### Implementation
 
-- [ ] T026 [P] [US3] Implement inline drill-in overlay component with breadcrumb/back in `src/ui/components/GroupDrillInOverlay.tsx`
-- [ ] T027 [P] [US3] Implement group view hook for open/close, breadcrumb state, simulation status banner in `src/app/hooks/useGroupView.ts`
-- [ ] T028 [US3] Integrate overlay entry/exit with canvas + store sync of edits to parent graph in `src/ui/WorkspaceCanvas.tsx`
-- [ ] T029 [US3] Add simulation status banner component for live/paused indicator in `src/ui/components/GroupStatusBanner.tsx`
+- [X] T026 [P] [US3] Implement inline drill-in overlay component with breadcrumb/back in `src/ui/components/GroupDrillInOverlay.tsx`
+- [X] T027 [P] [US3] Implement group view hook for open/close, breadcrumb state, simulation status banner in `src/app/hooks/useGroupView.ts`
+- [X] T028 [US3] Integrate overlay entry/exit with canvas + store sync of edits to parent graph in `src/ui/WorkspaceCanvas.tsx`
+- [X] T029 [US3] Add simulation status banner component for live/paused indicator in `src/ui/components/GroupStatusBanner.tsx`
 
 **Checkpoint**: User Story 3 independently testable.
 
@@ -103,10 +103,10 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
- - [ ] T030 [P] Add visual regression snapshots for light/dark + zoom extremes with automated contrast check enforcing FR-007 ratios in `src/tests/ui/__snapshots__/workspace-visuals.spec.ts.snap`
-- [ ] T031 Profile pan/zoom/select/energized timings with npm script in `scripts/profile-workspace.mjs`
- - [ ] T032 Update feature docs with final contracts, invariants, and decisions in `specs/001-workspace-ui-polish/spec.md` and `specs/001-workspace-ui-polish/plan.md`
- - [ ] T033 [P] Add usability/telemetry validation for SC-001–SC-004a in `src/tests/e2e/workspace-usability.spec.ts` and log results to `specs/001-workspace-ui-polish/spec.md#Success-Criteria`
+ - [X] T030 [P] Add visual regression snapshots for light/dark + zoom extremes with automated contrast check enforcing FR-007 ratios in `src/tests/ui/__snapshots__/workspace-visuals.spec.ts.snap`
+- [X] T031 Profile pan/zoom/select/energized timings with npm script in `scripts/profile-workspace.mjs`
+ - [X] T032 Update feature docs with final contracts, invariants, and decisions in `specs/001-workspace-ui-polish/spec.md` and `specs/001-workspace-ui-polish/plan.md`
+ - [X] T033 [P] Add usability/telemetry validation for SC-001–SC-004a in `src/tests/e2e/workspace-usability.spec.ts` and log results to `specs/001-workspace-ui-polish/spec.md#Success-Criteria`
 
 ---
 

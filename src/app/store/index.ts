@@ -23,6 +23,9 @@ interface AppState {
   outputs: Record<string, boolean>
   lights: Record<string, boolean>
   selectedNodeIds: string[]
+  selectionUpdatedAt: number
+  simulationUpdatedAt: number
+  openGroupId: string | null
   paletteDragging: { type: 'switch' | 'gate' | 'light' | null; gateType?: GateType } | null
   challengeStatus: {
     id?: string
@@ -45,6 +48,8 @@ interface AppState {
   cloneSelectedGroup: () => { ok: boolean; errors?: string[] }
   addHalfAdderTemplate: () => void
   toggleSwitch: (nodeId: string) => void
+  openGroup: (groupId: string) => void
+  closeGroup: () => void
   exportCircuit: () => CircuitExport
   importCircuit: (payload: unknown) => { ok: boolean; errors?: string[] }
   loadChallenge: (challengeId: string) => { ok: boolean; errors?: string[] }
@@ -57,6 +62,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   outputs: {},
   lights: {},
   selectedNodeIds: [],
+  selectionUpdatedAt: Date.now(),
+  simulationUpdatedAt: Date.now(),
+  openGroupId: null,
   paletteDragging: null,
   challengeStatus: { state: 'idle' },
   currentChallengeTarget: undefined,
@@ -76,7 +84,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         circuit = { ...circuit, nodes: [...circuit.nodes, createGateNode(state.paletteDragging.gateType, position)] }
       }
       const sim = simulate(circuit)
-      return { circuit, outputs: sim.outputs, lights: sim.lights, paletteDragging: null }
+      return { circuit, outputs: sim.outputs, lights: sim.lights, paletteDragging: null, simulationUpdatedAt: Date.now() }
     }),
 
   addSwitch: () =>
@@ -86,7 +94,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         nodes: [...state.circuit.nodes, createSwitchNode(nextPosition(state.circuit.nodes.length))],
       }
       const { outputs, lights } = simulate(circuit)
-      return { circuit, outputs, lights }
+      return { circuit, outputs, lights, simulationUpdatedAt: Date.now() }
     }),
 
   addLight: () =>
@@ -96,7 +104,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         nodes: [...state.circuit.nodes, createLightNode(nextPosition(state.circuit.nodes.length))],
       }
       const { outputs, lights } = simulate(circuit)
-      return { circuit, outputs, lights }
+      return { circuit, outputs, lights, simulationUpdatedAt: Date.now() }
     }),
 
   addGate: (gate) =>
@@ -106,7 +114,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         nodes: [...state.circuit.nodes, createGateNode(gate, nextPosition(state.circuit.nodes.length))],
       }
       const { outputs, lights } = simulate(circuit)
-      return { circuit, outputs, lights }
+      return { circuit, outputs, lights, simulationUpdatedAt: Date.now() }
     }),
 
   connectWire: (connection) => {
@@ -124,7 +132,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return false
     }
     const { outputs, lights } = simulate(result.value)
-    set({ circuit: result.value, outputs, lights })
+    set({ circuit: result.value, outputs, lights, simulationUpdatedAt: Date.now() })
     return true
   },
 
@@ -132,18 +140,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => {
       let updated = state.circuit.nodes
       let selectedIds = state.selectedNodeIds
+      let selectionChanged = false
       changes.forEach((change) => {
         if (change.type === 'position' && change.position) {
           updated = updated.map((node) => (node.id === change.id ? { ...node, position: change.position! } : node))
         }
         if (change.type === 'select' && typeof change.selected === 'boolean') {
+          selectionChanged = true
           selectedIds = change.selected
             ? Array.from(new Set([...selectedIds, change.id]))
             : selectedIds.filter((id) => id !== change.id)
         }
       })
       const circuit: Circuit = { ...state.circuit, nodes: updated }
-      return { circuit, selectedNodeIds: selectedIds }
+      return selectionChanged ? { circuit, selectedNodeIds: selectedIds, selectionUpdatedAt: Date.now() } : { circuit, selectedNodeIds: selectedIds }
     }),
 
   selectNodes: (ids) =>
@@ -154,7 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         state.selectedNodeIds.every((id) => next.includes(id)) &&
         next.every((id) => state.selectedNodeIds.includes(id))
       if (same) return {}
-      return { selectedNodeIds: next }
+      return { selectedNodeIds: next, selectionUpdatedAt: Date.now() }
     }),
 
   groupSelection: (label = 'Group', nodeIds?: string[]) => {
@@ -171,6 +181,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       outputs: sim.outputs,
       lights: sim.lights,
       selectedNodeIds: groupId ? [groupId] : [],
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+      openGroupId: null,
     })
     return { ok: true }
   },
@@ -182,7 +195,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const result = ungroup(state.circuit, groupId)
     if (!result.ok || !result.value) return { ok: false, errors: result.errors }
     const sim = simulate(result.value)
-    set({ circuit: result.value, outputs: sim.outputs, lights: sim.lights, selectedNodeIds: [] })
+    set({
+      circuit: result.value,
+      outputs: sim.outputs,
+      lights: sim.lights,
+      selectedNodeIds: [],
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+    })
     return { ok: true }
   },
 
@@ -193,7 +213,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const result = cloneGroup(state.circuit, groupId, { x: 60, y: 40 })
     if (!result.ok || !result.value) return { ok: false, errors: result.errors }
     const sim = simulate(result.value)
-    set({ circuit: result.value, outputs: sim.outputs, lights: sim.lights })
+    set({ circuit: result.value, outputs: sim.outputs, lights: sim.lights, simulationUpdatedAt: Date.now() })
     return { ok: true }
   },
 
@@ -204,7 +224,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const mergedWires = [...state.circuit.wires, ...template.wires]
       const circuit = { ...state.circuit, nodes: mergedNodes, wires: mergedWires }
       const sim = simulate(circuit)
-      return { circuit, outputs: sim.outputs, lights: sim.lights }
+      return { circuit, outputs: sim.outputs, lights: sim.lights, simulationUpdatedAt: Date.now() }
     }),
 
   toggleSwitch: (nodeId) =>
@@ -220,7 +240,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       const circuit: Circuit = { ...state.circuit, nodes }
       const { outputs, lights } = simulate(circuit)
-      return { circuit, outputs, lights }
+      return { circuit, outputs, lights, simulationUpdatedAt: Date.now() }
+    }),
+
+  openGroup: (groupId) =>
+    set((state) => {
+      const group = state.circuit.nodes.find((n) => n.type === 'group' && n.id === groupId)
+      if (!group) return {}
+      return { openGroupId: groupId, selectedNodeIds: [], selectionUpdatedAt: Date.now() }
+    }),
+
+  closeGroup: () =>
+    set((state) => {
+      if (!state.openGroupId) return {}
+      const groupId = state.openGroupId
+      return { openGroupId: null, selectedNodeIds: [groupId], selectionUpdatedAt: Date.now() }
     }),
 
   exportCircuit: () => {
@@ -239,7 +273,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     const circuit = parsed.value
     const { outputs, lights } = simulate(circuit)
-    set({ circuit, outputs, lights, challengeStatus: { state: 'idle' }, currentChallengeTarget: undefined })
+    set({
+      circuit,
+      outputs,
+      lights,
+      challengeStatus: { state: 'idle' },
+      currentChallengeTarget: undefined,
+      selectedNodeIds: [],
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+      openGroupId: null,
+    })
     return { ok: true }
   },
 
@@ -257,6 +301,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentChallengeTarget: target,
       challengeStatus: { id: challengeId, title, state: 'loaded', message: 'Challenge loaded. Adjust wiring and validate.' },
       selectedNodeIds: [],
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+      openGroupId: null,
     })
     return { ok: true }
   },
@@ -283,6 +330,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       outputs: {},
       lights: {},
       selectedNodeIds: [],
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+      openGroupId: null,
       paletteDragging: null,
       challengeStatus: { state: 'idle' },
       currentChallengeTarget: undefined,

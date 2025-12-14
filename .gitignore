@@ -18,6 +18,13 @@ build
 test-results/
 playwright-report/
 auth.json
+*.tsbuildinfo
+.eslintcache
+.cache/
+Thumbs.db
+Desktop.ini
+--help/
+--version/
 
 # Editor directories and files
 .vscode/*

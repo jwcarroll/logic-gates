@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "lint:commits": "commitlint --from=origin/main --to=HEAD",
     "preview": "vite preview",
+    "profile:workspace": "node scripts/profile-workspace.mjs",
     "test": "vitest",
     "test:watch": "vitest watch",
     "test:e2e": "echo \"No e2e runner configured yet\" && exit 0",

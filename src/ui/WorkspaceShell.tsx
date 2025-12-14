@@ -2,6 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { FloatingToolbar } from './components/FloatingToolbar'
 import { workspaceTokens } from '../design/tokens/workspace'
 import { WorkspaceCanvas } from './WorkspaceCanvas'
+import { useGroupView } from '../app/hooks/useGroupView'
+import { GroupDrillInOverlay } from './components/GroupDrillInOverlay'
+import { GroupStatusBanner } from './components/GroupStatusBanner'
 
 const anchors = [
   { id: 'primary-toolbar', position: 'top-right' as const, offset: { x: 16, y: 16 }, label: 'Workspace tools' },
@@ -14,6 +17,7 @@ type Viewport = { width: number; height: number }
 export function WorkspaceShell() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [viewport, setViewport] = useState<Viewport>({ width: 1440, height: 900 })
+  const groupView = useGroupView()
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -54,9 +58,21 @@ export function WorkspaceShell() {
       </div>
       {anchors.map((anchor) => (
         <FloatingToolbar key={anchor.id} anchor={anchor} viewport={viewport} selectionBox={selectionBox}>
-          <div className="floating-anchor__inner">
-            <span className="floating-anchor__label">{anchor.label}</span>
-          </div>
+          {anchor.id === 'breadcrumb' ? (
+            groupView.isOpen ? (
+              <GroupDrillInOverlay breadcrumb={groupView.breadcrumb} onBack={groupView.closeGroup} />
+            ) : (
+              <div className="floating-anchor__inner">
+                <span className="floating-anchor__label">Workspace</span>
+              </div>
+            )
+          ) : anchor.id === 'status-banner' ? (
+            <GroupStatusBanner status={groupView.status} isOpen={groupView.isOpen} />
+          ) : (
+            <div className="floating-anchor__inner">
+              <span className="floating-anchor__label">{anchor.label}</span>
+            </div>
+          )}
         </FloatingToolbar>
       ))}
     </div>

@@ -328,7 +328,7 @@
 .energized-wire[data-state='energized'] {
   border-top-color: var(--wire-base, #facc15);
   background-image: linear-gradient(90deg, var(--wire-gradient-start, #f59e0b), var(--wire-gradient-end, #f97316));
-  animation: wire-flow 1.2s linear infinite;
+  animation: wire-flow var(--wire-flow-duration, 1200ms) linear infinite;
   mask: linear-gradient(90deg, #000, transparent 40%);
 }
 
@@ -338,5 +338,31 @@
   }
   to {
     background-position: 100% 0;
+  }
+}
+
+.react-flow__edge.workspace-wire .react-flow__edge-path {
+  stroke: var(--wire-inactive, #475569);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.react-flow__edge.workspace-wire.workspace-wire--energized .react-flow__edge-path {
+  stroke: var(--wire-base, #facc15);
+  stroke-dasharray: var(--wire-dasharray, 14 8);
+  animation: wire-dash var(--wire-flow-duration, 1200ms) linear infinite;
+  filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.3));
+}
+
+.react-flow__edge.workspace-wire.workspace-wire--reverse .react-flow__edge-path {
+  animation-direction: reverse;
+}
+
+@keyframes wire-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -44;
   }
 }
