@@ -102,7 +102,7 @@ export const selectWireState = (state: StoreState): WireViewState[] => {
   }
 
   const { circuit, outputs } = state
-  const next = circuit.wires.map((wire) => {
+  const next: WireViewState[] = circuit.wires.map((wire) => {
     const energized = Boolean(outputs[wire.source])
     return {
       wireId: wire.id,

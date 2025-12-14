@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
-import { shallow } from 'zustand/shallow'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../store'
 import { selectWireState } from '../store/workspaceSelectors'
 
 export const useEnergizedWires = () => {
-  const wires = useAppStore((s) => selectWireState(s), shallow)
+  const wires = useAppStore(useShallow(selectWireState))
   return useMemo(() => wires, [wires])
 }

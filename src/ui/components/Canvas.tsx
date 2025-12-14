@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from 'react'
 import ReactFlow, { Background, Controls, MiniMap, applyNodeChanges } from 'reactflow'
 import type { Connection, Edge, EdgeTypes, Node, NodeTypes, NodeChange, NodeMouseHandler } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { shallow } from 'zustand/shallow'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../app/store'
 import { toReactFlowEdges, toReactFlowNodes } from '../../app/reactFlowAdapter'
 import { LogicNode } from './LogicNode'
@@ -36,7 +36,7 @@ export const Canvas = memo(({ viewGroupId = null, onOpenGroup }: Props) => {
   const dragState = useAppStore((s) => s.paletteDragging)
   const dropAt = useAppStore((s) => s.dropAt)
   const selectNodes = useAppStore((s) => s.selectNodes)
-  const selection = useAppStore((s) => selectSelectionState(s), shallow)
+  const selection = useAppStore(useShallow(selectSelectionState))
   const simulationUpdatedAt = useAppStore((s) => s.simulationUpdatedAt)
   const [error, setError] = useState<string | null>(null)
   const { outputs, lights } = useSimulationSync(outputsRaw, lightsRaw)

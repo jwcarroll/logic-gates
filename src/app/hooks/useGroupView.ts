@@ -1,9 +1,9 @@
-import { shallow } from 'zustand/shallow'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../store'
 import { selectGroupView } from '../store/workspaceSelectors'
 
 export const useGroupView = () => {
-  const view = useAppStore((s) => selectGroupView(s), shallow)
+  const view = useAppStore(useShallow(selectGroupView))
   const openGroup = useAppStore((s) => s.openGroup)
   const closeGroup = useAppStore((s) => s.closeGroup)
 
@@ -13,4 +13,3 @@ export const useGroupView = () => {
     closeGroup,
   }
 }
-
