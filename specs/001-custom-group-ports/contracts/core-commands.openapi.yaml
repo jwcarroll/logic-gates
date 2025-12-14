@@ -1,0 +1,304 @@
+openapi: 3.0.3
+info:
+  title: Logic Gates Core Commands (Design Contract)
+  version: 0.1.0
+  description: |
+    Design-time contracts for the pure-core command/query surface needed by
+    "Custom Group Ports". These are not network endpoints today; they model
+    inputs/outputs and error semantics.
+
+paths:
+  /commands/group/create:
+    post:
+      operationId: createGroup
+      summary: Create a group with an explicit external interface
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGroupResponse'
+        '400':
+          description: Validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandError'
+
+  /commands/group/update-interface:
+    post:
+      operationId: updateGroupInterface
+      summary: Update a group interface (disconnect external wires)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupInterfaceRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateGroupInterfaceResponse'
+        '400':
+          description: Validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandError'
+
+  /commands/circuit/export:
+    post:
+      operationId: exportCircuit
+      summary: Export a circuit payload with version metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportCircuitRequest'
+      responses:
+        '200':
+          description: Export payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircuitExport'
+
+  /commands/circuit/import:
+    post:
+      operationId: importCircuit
+      summary: Import a circuit payload (reject legacy versions)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CircuitImport'
+      responses:
+        '200':
+          description: Parsed circuit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportCircuitResponse'
+        '400':
+          description: Import validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandError'
+
+components:
+  schemas:
+    Circuit:
+      type: object
+      required: [nodes, wires]
+      properties:
+        id:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CircuitNode'
+        wires:
+          type: array
+          items:
+            $ref: '#/components/schemas/Wire'
+        metadata:
+          $ref: '#/components/schemas/CircuitMetadata'
+
+    CircuitMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+        createdAt:
+          type: string
+
+    Wire:
+      type: object
+      required: [id, source, target, sourceNode, targetNode]
+      properties:
+        id: { type: string }
+        source: { type: string, description: 'Port id' }
+        target: { type: string, description: 'Port id' }
+        sourceNode: { type: string, description: 'Node id' }
+        targetNode: { type: string, description: 'Node id' }
+
+    CircuitNode:
+      type: object
+      description: |
+        Discriminated union by `type`. This contract is intentionally permissive
+        to avoid over-specifying unrelated node kinds.
+      required: [id, type, position, width, height]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          enum: [switch, gate, light, group, junction]
+        position:
+          $ref: '#/components/schemas/Position'
+        width: { type: number }
+        height: { type: number }
+        groupId:
+          type: string
+          nullable: true
+        data:
+          type: object
+
+    Position:
+      type: object
+      required: [x, y]
+      properties:
+        x: { type: number }
+        y: { type: number }
+
+    GroupInterface:
+      type: object
+      required: [inputs, outputs]
+      properties:
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExposedPort'
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExposedPort'
+
+    ExposedPort:
+      type: object
+      required: [id, kind, name, mapsToInternalPortId]
+      properties:
+        id: { type: string }
+        kind:
+          type: string
+          enum: [input, output]
+        name:
+          type: string
+          minLength: 1
+        mapsToInternalPortId:
+          type: string
+          description: 'Internal junction port id within the group'
+
+    GroupPortMap:
+      type: object
+      required: [inputs, outputs]
+      properties:
+        inputs:
+          type: object
+          additionalProperties: { type: string }
+        outputs:
+          type: object
+          additionalProperties: { type: string }
+
+    CreateGroupRequest:
+      type: object
+      required: [circuit, nodeIds, label, interface]
+      properties:
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        nodeIds:
+          type: array
+          items: { type: string }
+          minItems: 1
+        label:
+          type: string
+          minLength: 1
+        interface:
+          $ref: '#/components/schemas/GroupInterface'
+        options:
+          type: object
+          properties:
+            autoCreateJunctions:
+              type: boolean
+              default: true
+
+    CreateGroupResponse:
+      type: object
+      required: [circuit, groupId]
+      properties:
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        groupId:
+          type: string
+
+    UpdateGroupInterfaceRequest:
+      type: object
+      required: [circuit, groupId, interface]
+      properties:
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        groupId:
+          type: string
+        interface:
+          $ref: '#/components/schemas/GroupInterface'
+        options:
+          type: object
+          properties:
+            disconnectStrategy:
+              type: string
+              enum: [all]
+              default: all
+
+    UpdateGroupInterfaceResponse:
+      type: object
+      required: [circuit, disconnectedWireIds]
+      properties:
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        disconnectedWireIds:
+          type: array
+          items: { type: string }
+
+    ExportCircuitRequest:
+      type: object
+      required: [circuit]
+      properties:
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        version:
+          type: string
+          enum: ['1.2']
+
+    CircuitImport:
+      type: object
+      required: [version, circuit]
+      properties:
+        version:
+          type: string
+          enum: ['1.2']
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        metadata:
+          $ref: '#/components/schemas/CircuitMetadata'
+
+    CircuitExport:
+      allOf:
+        - $ref: '#/components/schemas/CircuitImport'
+
+    ImportCircuitResponse:
+      type: object
+      required: [circuit]
+      properties:
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+
+    CommandError:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items: { type: string }
+

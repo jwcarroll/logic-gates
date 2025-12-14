@@ -1,0 +1,201 @@
+openapi: 3.1.0
+info:
+  title: Logic Gates - Group Interface Contracts (In-Process)
+  version: 0.1.0
+  description: >
+    Contracts for group interface authoring and updates. These operations are implemented as pure
+    core commands, but described here using OpenAPI for clarity and testability.
+servers:
+  - url: http://localhost/in-process
+tags:
+  - name: groups
+paths:
+  /groups:
+    post:
+      tags: [groups]
+      summary: Create a group from selected nodes
+      operationId: groupNodes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupNodesRequest'
+      responses:
+        '200':
+          description: Group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupNodesResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /groups/{groupId}/interface:
+    put:
+      tags: [groups]
+      summary: Replace a group's explicit external interface
+      operationId: setGroupInterface
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetGroupInterfaceRequest'
+      responses:
+        '200':
+          description: Interface updated; includes diff for adapters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetGroupInterfaceResponse'
+        '400':
+          description: Interface invalid or incompatible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    GroupNodesRequest:
+      type: object
+      required: [nodeIds, label]
+      properties:
+        nodeIds:
+          type: array
+          items: { type: string }
+          minItems: 1
+        label:
+          type: string
+          minLength: 1
+        collapsed:
+          type: boolean
+          default: false
+        interface:
+          $ref: '#/components/schemas/GroupInterface'
+    GroupNodesResponse:
+      type: object
+      required: [ok, circuit]
+      properties:
+        ok: { type: boolean, const: true }
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+    SetGroupInterfaceRequest:
+      type: object
+      required: [interface]
+      properties:
+        interface:
+          $ref: '#/components/schemas/GroupInterface'
+    SetGroupInterfaceResponse:
+      type: object
+      required: [ok, circuit, diff]
+      properties:
+        ok: { type: boolean, const: true }
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        diff:
+          $ref: '#/components/schemas/GroupInterfaceDiff'
+    GroupInterface:
+      type: object
+      required: [inputs, outputs, revision]
+      properties:
+        revision:
+          type: integer
+          minimum: 0
+        inputs:
+          type: array
+          items: { $ref: '#/components/schemas/ExposedPort' }
+        outputs:
+          type: array
+          items: { $ref: '#/components/schemas/ExposedPort' }
+    ExposedPort:
+      type: object
+      required: [id, name, internalPortId]
+      properties:
+        id:
+          type: string
+          description: Group port id (globally unique across circuit)
+        name:
+          type: string
+          minLength: 1
+        internalPortId:
+          type: string
+          description: >
+            Internal port endpoint represented by this exposed port. Contract rule:
+            MUST reference a junction port inside the group (inputs map to interface-input junction outputs;
+            outputs map to interface-output junction inputs).
+    GroupInterfaceDiff:
+      type: object
+      required: [addedPortIds, removedPortIds, keptPortIds, disconnectedWireIds, mappingChangedPortIds]
+      properties:
+        addedPortIds:
+          type: array
+          items: { type: string }
+        removedPortIds:
+          type: array
+          items: { type: string }
+        keptPortIds:
+          type: array
+          items: { type: string }
+        disconnectedWireIds:
+          type: array
+          items: { type: string }
+        mappingChangedPortIds:
+          type: array
+          items: { type: string }
+          description: Ports whose id was kept but internalPortId changed (warn user)
+    ErrorResponse:
+      type: object
+      required: [ok, errors]
+      properties:
+        ok: { type: boolean, const: false }
+        errors:
+          type: array
+          items: { type: string }
+    Circuit:
+      type: object
+      required: [nodes, wires]
+      properties:
+        nodes:
+          type: array
+          items: { $ref: '#/components/schemas/CircuitNode' }
+        wires:
+          type: array
+          items: { $ref: '#/components/schemas/Wire' }
+    CircuitNode:
+      type: object
+      required: [id, type, position, width, height, data]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          enum: [switch, gate, light, group, junction]
+        position:
+          type: object
+          required: [x, y]
+          properties:
+            x: { type: number }
+            y: { type: number }
+        width: { type: number }
+        height: { type: number }
+        groupId: { type: string, nullable: true }
+        data:
+          type: object
+          description: Node-type-specific payload; validated by core types + invariants.
+    Wire:
+      type: object
+      required: [id, source, target, sourceNode, targetNode]
+      properties:
+        id: { type: string }
+        source: { type: string }
+        target: { type: string }
+        sourceNode: { type: string }
+        targetNode: { type: string }

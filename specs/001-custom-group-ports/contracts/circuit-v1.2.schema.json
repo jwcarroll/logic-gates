@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "logic-gates/circuit-v1.2.schema.json",
+  "title": "Logic Gates Circuit Export (v1.2)",
+  "type": "object",
+  "required": ["version", "circuit"],
+  "properties": {
+    "version": { "const": "1.2" },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "circuit": {
+      "type": "object",
+      "required": ["nodes", "wires"],
+      "properties": {
+        "id": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
+        },
+        "wires": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/wire" }
+        },
+        "metadata": { "$ref": "#/$defs/circuitMetadata" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "position": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": { "x": { "type": "number" }, "y": { "type": "number" } },
+      "additionalProperties": false
+    },
+    "circuitMetadata": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "wire": {
+      "type": "object",
+      "required": ["id", "source", "target", "sourceNode", "targetNode"],
+      "properties": {
+        "id": { "type": "string" },
+        "source": { "type": "string" },
+        "target": { "type": "string" },
+        "sourceNode": { "type": "string" },
+        "targetNode": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "nodeBase": {
+      "type": "object",
+      "required": ["id", "type", "position", "width", "height", "data"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "position": { "$ref": "#/$defs/position" },
+        "width": { "type": "number" },
+        "height": { "type": "number" },
+        "groupId": { "type": ["string", "null"] },
+        "data": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "exposedPort": {
+      "type": "object",
+      "required": ["id", "kind", "name", "mapsToInternalPortId"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "enum": ["input", "output"] },
+        "name": { "type": "string", "minLength": 1 },
+        "mapsToInternalPortId": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "groupInterface": {
+      "type": "object",
+      "required": ["inputs", "outputs"],
+      "properties": {
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/exposedPort" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/exposedPort" } }
+      },
+      "additionalProperties": false
+    },
+    "groupPortMap": {
+      "type": "object",
+      "required": ["inputs", "outputs"],
+      "properties": {
+        "inputs": { "type": "object", "additionalProperties": { "type": "string" } },
+        "outputs": { "type": "object", "additionalProperties": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "groupNode": {
+      "allOf": [
+        { "$ref": "#/$defs/nodeBase" },
+        {
+          "properties": {
+            "type": { "const": "group" },
+            "data": {
+              "type": "object",
+              "required": ["label", "childNodeIds", "collapsed", "interface", "portMap"],
+              "properties": {
+                "label": { "type": "string" },
+                "childNodeIds": { "type": "array", "items": { "type": "string" } },
+                "collapsed": { "type": "boolean" },
+                "interface": { "$ref": "#/$defs/groupInterface" },
+                "portMap": { "$ref": "#/$defs/groupPortMap" }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "junctionNode": {
+      "allOf": [
+        { "$ref": "#/$defs/nodeBase" },
+        {
+          "properties": {
+            "type": { "const": "junction" },
+            "data": {
+              "type": "object",
+              "required": ["inputPortId", "outputPortId"],
+              "properties": {
+                "label": { "type": "string" },
+                "inputPortId": { "type": "string" },
+                "outputPortId": { "type": "string" }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "node": {
+      "oneOf": [
+        { "$ref": "#/$defs/groupNode" },
+        { "$ref": "#/$defs/junctionNode" },
+        { "$ref": "#/$defs/nodeBase" }
+      ]
+    }
+  }
+}
+
