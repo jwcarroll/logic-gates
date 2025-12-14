@@ -1,0 +1,46 @@
+{
+  "workspace": {
+    "viewportWidth": 1440,
+    "viewportHeight": 900,
+    "pan": { "x": -120, "y": 40 },
+    "zoom": 1,
+    "anchors": [
+      { "id": "primary-toolbar", "position": "top-right", "offset": { "x": 16, "y": 16 }, "type": "toolbar", "visibility": true },
+      { "id": "group-breadcrumb", "position": "top-left", "offset": { "x": 16, "y": 16 }, "type": "breadcrumb", "visibility": true },
+      { "id": "status-banner", "position": "bottom-left", "offset": { "x": 20, "y": 20 }, "type": "status", "visibility": true }
+    ]
+  },
+  "graph": {
+    "nodes": [
+      { "id": "g1", "type": "group", "label": "Full Adder", "position": { "x": 420, "y": 320 }, "width": 220, "height": 160 },
+      { "id": "l1", "type": "light", "label": "Carry Out", "position": { "x": 780, "y": 340 }, "width": 120, "height": 80 }
+    ],
+    "wires": [
+      { "id": "w-co", "source": "g1:p-out", "target": "l1:p-in", "sourceNode": "g1", "targetNode": "l1" }
+    ]
+  },
+  "group": {
+    "groupId": "g1",
+    "parentId": "root",
+    "breadcrumb": ["Root", "Full Adder"],
+    "status": "live",
+    "selection": {
+      "selectedNodes": ["ha1"],
+      "selectedWires": ["hw1"],
+      "selectedGroups": [],
+      "focusId": "ha1",
+      "updatedAt": "2025-12-13T00:00:00.000Z"
+    },
+    "subgraph": {
+      "nodes": [
+        { "id": "ha1", "type": "gate", "gateType": "XOR", "position": { "x": 360, "y": 260 }, "width": 140, "height": 80 },
+        { "id": "ha2", "type": "gate", "gateType": "AND", "position": { "x": 560, "y": 260 }, "width": 140, "height": 80 },
+        { "id": "ha-out", "type": "output", "label": "Group Out", "position": { "x": 720, "y": 260 }, "width": 120, "height": 80 }
+      ],
+      "wires": [
+        { "id": "hw1", "source": "ha1:p-out", "target": "ha2:p-in", "sourceNode": "ha1", "targetNode": "ha2" },
+        { "id": "hw2", "source": "ha2:p-out", "target": "ha-out:p-in", "sourceNode": "ha2", "targetNode": "ha-out" }
+      ]
+    }
+  }
+}

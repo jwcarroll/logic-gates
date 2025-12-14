@@ -3,17 +3,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Canvas } from '../../ui/components/Canvas'
 import { useAppStore } from '../../app/store'
 
-vi.mock('reactflow', async () => {
-  const actual = await vi.importActual<typeof import('reactflow')>('reactflow')
-  return {
-    ...actual,
-    default: (props: any) => <div data-testid="reactflow">{props.children}</div>,
-    Background: () => null,
-    Controls: () => null,
-    MiniMap: () => null,
-    applyNodeChanges: vi.fn(),
-  }
-})
+vi.mock('reactflow', () => ({
+  __esModule: true,
+  default: (props: any) => <div data-testid="reactflow">{props.children}</div>,
+  Background: () => null,
+  Controls: () => null,
+  MiniMap: () => null,
+  applyNodeChanges: vi.fn(),
+}))
+
+vi.mock('../../app/hooks/useSelectionStyles', () => ({
+  useSelectionStyles: () => ({
+    stroke: '#22c55e',
+    strokeWidth: 3,
+    halo: '#22c55e33',
+    fill: '#22c55e11',
+    vectorEffect: 'non-scaling-stroke' as const,
+    cssVars: {},
+  }),
+}))
+
+vi.mock('../../app/hooks/useEnergizedWires', () => ({
+  useEnergizedWires: () => [],
+}))
+
+vi.mock('../components/EnergizedWireOverlay', () => ({
+  EnergizedWireOverlay: () => null,
+}))
 
 describe('Canvas interactions', () => {
   beforeEach(() => {

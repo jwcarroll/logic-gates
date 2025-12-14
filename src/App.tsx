@@ -1,11 +1,11 @@
 import './App.css'
-import { Canvas } from './ui/components/Canvas'
 import { Toolbar } from './ui/components/Toolbar'
 import { ChallengePanel } from './ui/pages/ChallengePanel'
 import { loadSettings } from './app/settings/settings'
 import { getAppVersion, getAppEnvironment } from './core/version'
 import { createLogger } from './app/logging'
 import { createPinoAdapter } from './app/logging/pinoAdapter'
+import { WorkspaceShell } from './ui/WorkspaceShell'
 
 function App() {
   let versionLabel = 'unknown'
@@ -45,7 +45,7 @@ function App() {
           <ChallengePanel />
         </aside>
         <section className="app-canvas">
-          <Canvas />
+          <WorkspaceShell />
         </section>
       </main>
     </div>

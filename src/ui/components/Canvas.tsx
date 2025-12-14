@@ -26,6 +26,7 @@ export const Canvas = memo(() => {
   const selectedIds = useAppStore((s) => s.selectedNodeIds)
   const [error, setError] = useState<string | null>(null)
   const { outputs, lights } = useSimulationSync(outputsRaw, lightsRaw)
+  const energizedWireState: [] = []
 
   const nodes = useMemo<Node[]>(() => toReactFlowNodes(circuit, outputs, lights, { onToggleSwitch: toggleSwitch }), [circuit, outputs, lights, toggleSwitch])
   const edges = useMemo<Edge[]>(() => toReactFlowEdges(circuit), [circuit])
@@ -88,6 +89,7 @@ export const Canvas = memo(() => {
         <Controls />
         <MiniMap pannable zoomable />
       </ReactFlow>
+      <div className="energized-overlay" data-testid="energized-overlay" />
       {error ? (
         <div className="canvas-error" role="status">
           {error}

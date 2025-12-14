@@ -1,0 +1,22 @@
+:root {
+  --workspace-min-width: 1024px;
+  --workspace-anchor-offset: 16px;
+  --workspace-anchor-offset-lg: 24px;
+  --workspace-anchor-gutter: 18px;
+}
+
+.workspace-shell {
+  min-width: var(--workspace-min-width);
+}
+
+@media (min-width: 1440px) {
+  .floating-anchor {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .floating-anchor {
+    padding: 8px 12px;
+  }
+}

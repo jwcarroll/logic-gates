@@ -1,8 +1,12 @@
 import { render, screen } from '@testing-library/react'
-import { vi } from 'vitest'
+import { vi, describe, it, expect } from 'vitest'
 
 import App from '../../App'
 import { mockSettings } from './__mocks__/settingsMock'
+
+vi.mock('../../ui/WorkspaceShell', () => ({
+  WorkspaceShell: () => <div data-testid="workspace-shell-mock" />,
+}))
 
 vi.mock('../../app/settings/settings', () => ({
   loadSettings: vi.fn(() => mockSettings),

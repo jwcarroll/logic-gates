@@ -2,11 +2,18 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   background: #0b1220;
   color: #e5e7eb;
+  overflow: hidden;
 }
 
 a {
@@ -16,4 +23,24 @@ a {
 
 button {
   font-family: inherit;
+}
+
+:root {
+  --selection-stroke: #22c55e;
+  --selection-fill: rgba(34, 197, 94, 0.14);
+  --selection-glow: rgba(34, 197, 94, 0.45);
+  --selection-handle: #e2e8f0;
+}
+
+.react-flow__node.selected .logic-node {
+  border-color: var(--selection-stroke);
+  box-shadow: 0 0 0 3px var(--selection-glow), 0 12px 34px rgba(0, 0, 0, 0.45);
+}
+
+.logic-node__handle--active {
+  box-shadow: 0 0 0 4px var(--selection-glow);
+}
+
+.react-flow__edge-path {
+  vector-effect: non-scaling-stroke;
 }

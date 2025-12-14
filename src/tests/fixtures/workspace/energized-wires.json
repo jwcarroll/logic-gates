@@ -1,0 +1,30 @@
+{
+  "simulationState": "running",
+  "workspace": {
+    "viewportWidth": 1280,
+    "viewportHeight": 800,
+    "theme": "dark",
+    "anchors": [
+      { "id": "status", "position": "bottom-left", "offset": { "x": 24, "y": 24 }, "type": "status", "visibility": true },
+      { "id": "controls", "position": "top-right", "offset": { "x": 18, "y": 18 }, "type": "toolbar", "visibility": true }
+    ]
+  },
+  "graph": {
+    "nodes": [
+      { "id": "s1", "type": "switch", "label": "Source", "position": { "x": 120, "y": 360 }, "width": 120, "height": 72 },
+      { "id": "g1", "type": "gate", "gateType": "OR", "position": { "x": 360, "y": 360 }, "width": 140, "height": 80 },
+      { "id": "g2", "type": "gate", "gateType": "AND", "position": { "x": 600, "y": 360 }, "width": 140, "height": 80 },
+      { "id": "l1", "type": "light", "label": "Output", "position": { "x": 860, "y": 360 }, "width": 120, "height": 72 }
+    ],
+    "wires": [
+      { "id": "w1", "source": "s1:p-out", "target": "g1:p-in-a", "sourceNode": "s1", "targetNode": "g1" },
+      { "id": "w2", "source": "g1:p-out", "target": "g2:p-in-a", "sourceNode": "g1", "targetNode": "g2" },
+      { "id": "w3", "source": "g2:p-out", "target": "l1:p-in", "sourceNode": "g2", "targetNode": "l1" }
+    ]
+  },
+  "wireState": [
+    { "wireId": "w1", "energized": true, "direction": "forward", "intensity": 0.82, "updatedAt": "2025-12-13T12:00:00.000Z" },
+    { "wireId": "w2", "energized": true, "direction": "reverse", "intensity": 0.35, "updatedAt": "2025-12-13T12:00:00.000Z" },
+    { "wireId": "w3", "energized": false, "direction": null, "intensity": 0, "updatedAt": "2025-12-13T12:00:00.000Z" }
+  ]
+}
