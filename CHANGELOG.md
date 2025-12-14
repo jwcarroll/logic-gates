@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/jwcarroll/logic-gates/compare/v1.2.2...v1.2.3) (2025-12-14)
+
+
+### Bug Fixes
+
+* **ci-cd:** fixed compiler issues ([7448efb](https://github.com/jwcarroll/logic-gates/commit/7448efb10e9d497db0cd9ae1efb307e32bc86907))
+
 ## [1.2.2](https://github.com/jwcarroll/logic-gates/compare/v1.2.1...v1.2.2) (2025-12-12)
 
 
