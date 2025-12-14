@@ -21,7 +21,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // Log for Playwright capture and debugging
     // eslint-disable-next-line no-console
     console.error('App crashed', error, info?.componentStack)
-    ;(window as any).__LAST_ERROR__ = { message: error?.message, stack: info?.componentStack }
+    try {
+      // Surface stack in global for automated grabs
+      ;(window as any).__LAST_ERROR__ = { message: error?.message, stack: error?.stack, componentStack: info?.componentStack }
+    } catch {
+      /* ignore */
+    }
   }
 
   handleReset = () => {
@@ -36,9 +41,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   render() {
     if (this.state.hasError) {
       return (
-        <div className="app-error-fallback" data-testid="app-error-fallback" role="alert">
-          <h2>Something went wrong</h2>
-          <p>{this.state.message ?? 'Unknown error'}</p>
+        <div className="workspace-shell app-error-fallback" data-testid="app-error-fallback" role="alert">
+          <div className="workspace-canvas-layer">
+            <div className="canvas-root">
+              <div className="energized-overlay" data-empty="true" />
+              <div className="canvas-error">{this.state.message ?? 'Unknown error'}</div>
+            </div>
+          </div>
           <button onClick={this.handleReset}>Reset app</button>
         </div>
       )

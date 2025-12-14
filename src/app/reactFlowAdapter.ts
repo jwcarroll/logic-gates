@@ -20,9 +20,14 @@ export function toReactFlowNodes(
   outputs: Record<string, boolean>,
   lights: Record<string, boolean>,
   handlers: { onToggleSwitch: (nodeId: string) => void },
+  view?: { groupId?: string | null },
 ): Node<LogicNodeData>[] {
   return circuit.nodes
-    .filter((node) => !node.groupId) // hide children inside groups; render group node instead
+    .filter((node) => {
+      const groupId = view?.groupId ?? null
+      if (groupId) return node.groupId === groupId
+      return !node.groupId
+    }) // root hides children inside groups; group view shows children for that group
     .map((node) => ({
       id: node.id,
       type: 'logicNode',
@@ -34,11 +39,16 @@ export function toReactFlowNodes(
     }))
 }
 
-export function toReactFlowEdges(circuit: Circuit): Edge[] {
+export function toReactFlowEdges(circuit: Circuit, view?: { groupId?: string | null }): Edge[] {
+  const nodeById = new Map(circuit.nodes.map((n) => [n.id, n]))
+  const groupId = view?.groupId ?? null
   return circuit.wires
     .filter((wire) => {
-      const sourceNode = circuit.nodes.find((n) => n.id === wire.sourceNode)
-      const targetNode = circuit.nodes.find((n) => n.id === wire.targetNode)
+      const sourceNode = nodeById.get(wire.sourceNode)
+      const targetNode = nodeById.get(wire.targetNode)
+      if (groupId) {
+        return sourceNode?.groupId === groupId && targetNode?.groupId === groupId
+      }
       return !(sourceNode?.groupId || targetNode?.groupId)
     })
     .map((wire) => ({

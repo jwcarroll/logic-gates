@@ -1,4 +1,20 @@
 import '@testing-library/jest-dom/vitest'
+import React from 'react'
+import { vi } from 'vitest'
+
+// Mock reactflow to avoid internal Zustand loops in jsdom unit tests.
+vi.mock('reactflow', () => {
+  const MockFlow = ({ children }: { children: React.ReactNode }) =>
+    React.createElement('div', { 'data-testid': 'reactflow-mock' }, children)
+  return {
+    __esModule: true,
+    default: MockFlow,
+    Background: () => null,
+    Controls: () => null,
+    MiniMap: () => null,
+    applyNodeChanges: vi.fn(),
+  }
+})
 
 // React Flow relies on ResizeObserver; provide a minimal jsdom-friendly stub.
 class ResizeObserverStub {

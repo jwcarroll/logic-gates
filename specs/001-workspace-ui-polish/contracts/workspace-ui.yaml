@@ -1,0 +1,195 @@
+openapi: 3.1.0
+info:
+  title: Workspace UI Polish
+  version: 0.1.0
+  description: Internal UI state contracts for workspace canvas, selection cues, energized wires, and group drill-in overlay.
+servers:
+  - url: http://localhost/internal
+paths:
+  /workspace/layout:
+    post:
+      summary: Apply workspace layout and floating control anchors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceLayoutRequest'
+      responses:
+        '200':
+          description: Layout applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceLayoutState'
+  /workspace/selection:
+    post:
+      summary: Update selection state and focus target
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectionRequest'
+      responses:
+        '200':
+          description: Selection applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelectionState'
+  /workspace/wires/energized:
+    post:
+      summary: Update energized wire styling payload from simulation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WireStateUpdate'
+      responses:
+        '200':
+          description: Wire styling state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WireStateResponse'
+  /workspace/groups/{groupId}/open:
+    post:
+      summary: Open a grouped circuit in inline drill-in overlay
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupOpenRequest'
+      responses:
+        '200':
+          description: Group opened with breadcrumb/back control
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupViewState'
+  /workspace/groups/{groupId}/sync:
+    post:
+      summary: Sync edits made inside group back to parent graph
+      parameters:
+        - in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupSyncRequest'
+      responses:
+        '200':
+          description: Edits persisted and parent updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupSyncResponse'
+components:
+  schemas:
+    WorkspaceLayoutRequest:
+      type: object
+      required: [viewportWidth, viewportHeight, theme, anchors]
+      properties:
+        viewportWidth: { type: integer }
+        viewportHeight: { type: integer }
+        theme: { type: string, enum: [light, dark] }
+        anchors:
+          type: array
+          items: { $ref: '#/components/schemas/ControlAnchor' }
+    WorkspaceLayoutState:
+      allOf:
+        - $ref: '#/components/schemas/WorkspaceLayoutRequest'
+        - type: object
+          properties:
+            pan:
+              type: object
+              properties:
+                x: { type: number }
+                y: { type: number }
+            zoom: { type: number, minimum: 0.25, maximum: 2.5 }
+    ControlAnchor:
+      type: object
+      required: [id, position, type]
+      properties:
+        id: { type: string }
+        position: { type: string, enum: [top-left, top-right, bottom-left, bottom-right] }
+        offset:
+          type: object
+          properties:
+            x: { type: number }
+            y: { type: number }
+        type: { type: string, enum: [toolbar, menu, breadcrumb, status] }
+        visibility: { type: boolean }
+    SelectionRequest:
+      type: object
+      properties:
+        selectedNodes: { type: array, items: { type: string } }
+        selectedWires: { type: array, items: { type: string } }
+        selectedGroups: { type: array, items: { type: string } }
+        focusId: { type: string, nullable: true }
+    SelectionState:
+      allOf:
+        - $ref: '#/components/schemas/SelectionRequest'
+        - type: object
+          properties:
+            updatedAt: { type: string, format: date-time }
+    WireStateUpdate:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [wireId, energized]
+            properties:
+              wireId: { type: string }
+              energized: { type: boolean }
+              direction: { type: string, nullable: true, enum: [forward, reverse] }
+              intensity: { type: number, minimum: 0, maximum: 1 }
+    WireStateResponse:
+      type: object
+      properties:
+        updatedAt: { type: string, format: date-time }
+    GroupOpenRequest:
+      type: object
+      properties:
+        parentId: { type: string }
+        breadcrumb: { type: array, items: { type: string } }
+        simulationState: { type: string, enum: [running, paused, stopped] }
+    GroupViewState:
+      type: object
+      required: [groupId, breadcrumb, status]
+      properties:
+        groupId: { type: string }
+        breadcrumb: { type: array, items: { type: string } }
+        status: { type: string, enum: [live, paused] }
+        selection: { $ref: '#/components/schemas/SelectionState' }
+    GroupSyncRequest:
+      type: object
+      required: [changeset]
+      properties:
+        changeset:
+          type: object
+          additionalProperties: true
+        simulationState: { type: string, enum: [running, paused, stopped] }
+    GroupSyncResponse:
+      type: object
+      properties:
+        groupId: { type: string }
+        parentId: { type: string }
+        result: { type: string, enum: [ok, conflict] }
+        updatedAt: { type: string, format: date-time }
