@@ -22,6 +22,7 @@ export function WorkspaceShell() {
   const notice = useAppStore((s) => s.notice)
   const undo = useAppStore((s) => s.undo)
   const redo = useAppStore((s) => s.redo)
+  const deleteSelection = useAppStore((s) => s.deleteSelection)
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -64,19 +65,26 @@ export function WorkspaceShell() {
       if (isTypingTarget(event.target)) return
       const key = event.key.toLowerCase()
       const mod = event.metaKey || event.ctrlKey
-      if (!mod) return
-      if (key !== 'z') return
-      event.preventDefault()
-      if (event.shiftKey) {
-        redo()
-      } else {
-        undo()
+
+      if (mod && key === 'z') {
+        event.preventDefault()
+        if (event.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+        return
+      }
+
+      if (!mod && (key === 'delete' || key === 'backspace')) {
+        event.preventDefault()
+        deleteSelection()
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [undo, redo])
+  }, [undo, redo, deleteSelection])
 
   const selectionBox = null // placeholder until selection bounds are available
 

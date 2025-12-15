@@ -3,6 +3,7 @@ import type { Circuit } from '../../core/types'
 export type HistorySnapshot = {
   circuit: Circuit
   selectedNodeIds: string[]
+  selectedWireIds: string[]
   openGroupId: string | null
 }
 

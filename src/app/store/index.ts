@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 import { createGateNode, createLightNode, createSwitchNode } from '../../core/factories'
-import { cloneGroup, connect, createGroup, ungroup, updateGroupInterface } from '../../core/commands'
+import { cloneGroup, connect, createGroup, deleteSelection as coreDeleteSelection, ungroup, updateGroupInterface } from '../../core/commands'
 import { makeId } from '../../core/ids'
 import { simulate } from '../../core/simulation'
 import type { Circuit, CircuitNode, GateType, JunctionNode, Position } from '../../core/types'
-import type { Connection, NodeChange } from 'reactflow'
+import type { Connection, EdgeChange, NodeChange } from 'reactflow'
 import type { CircuitExport } from '../../core/io/schema'
 import { exportCircuit as buildExport, importCircuit as parseImport } from '../../core/io/importExport'
 import type { ChallengeTarget } from '../../core/commands/challengeCommands'
@@ -28,8 +28,10 @@ interface AppState {
   outputs: Record<string, boolean>
   lights: Record<string, boolean>
   selectedNodeIds: string[]
+  selectedWireIds: string[]
   selectionUpdatedAt: number
   simulationUpdatedAt: number
+  deleteUpdatedAt: number
   openGroupId: string | null
   notice: { message: string; kind: 'info' | 'warning'; updatedAt: number } | null
   history: ReturnType<typeof createEmptyHistory>
@@ -63,7 +65,10 @@ interface AppState {
   addGate: (gate: GateType) => void
   connectWire: (connection: Connection) => boolean
   moveNodes: (changes: NodeChange[]) => void
+  moveEdges: (changes: EdgeChange[]) => void
   selectNodes: (ids: string[] | ((prev: string[]) => string[])) => void
+  selectWires: (ids: string[] | ((prev: string[]) => string[])) => void
+  deleteSelection: () => boolean
   undo: () => boolean
   redo: () => boolean
   groupSelection: (label?: string, nodeIds?: string[]) => { ok: boolean; errors?: string[] }
@@ -94,8 +99,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   outputs: {},
   lights: {},
   selectedNodeIds: [],
+  selectedWireIds: [],
   selectionUpdatedAt: Date.now(),
   simulationUpdatedAt: Date.now(),
+  deleteUpdatedAt: Date.now(),
   openGroupId: null,
   notice: null,
   history: createEmptyHistory(),
@@ -198,6 +205,23 @@ export const useAppStore = create<AppState>((set, get) => ({
       return selectionChanged ? { circuit, selectedNodeIds: selectedIds, selectionUpdatedAt: Date.now() } : { circuit, selectedNodeIds: selectedIds }
     }),
 
+  moveEdges: (changes) =>
+    set((state) => {
+      let selectedIds = state.selectedWireIds
+      let selectionChanged = false
+
+      changes.forEach((change) => {
+        if (change.type === 'select' && typeof change.selected === 'boolean') {
+          selectionChanged = true
+          selectedIds = change.selected
+            ? Array.from(new Set([...selectedIds, change.id]))
+            : selectedIds.filter((id) => id !== change.id)
+        }
+      })
+
+      return selectionChanged ? { selectedWireIds: selectedIds, selectionUpdatedAt: Date.now() } : {}
+    }),
+
   selectNodes: (ids) =>
     set((state) => {
       const next = typeof ids === 'function' ? ids(state.selectedNodeIds) : ids
@@ -208,6 +232,47 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (same) return {}
       return { selectedNodeIds: next, selectionUpdatedAt: Date.now() }
     }),
+
+  selectWires: (ids) =>
+    set((state) => {
+      const next = typeof ids === 'function' ? ids(state.selectedWireIds) : ids
+      const same =
+        state.selectedWireIds.length === next.length &&
+        state.selectedWireIds.every((id) => next.includes(id)) &&
+        next.every((id) => state.selectedWireIds.includes(id))
+      if (same) return {}
+      return { selectedWireIds: next, selectionUpdatedAt: Date.now() }
+    }),
+
+  deleteSelection: () => {
+    const state = get()
+    if (!state.selectedNodeIds.length && !state.selectedWireIds.length) {
+      set({ deleteUpdatedAt: Date.now() })
+      return false
+    }
+
+    const result = coreDeleteSelection(state.circuit, { nodeIds: state.selectedNodeIds, wireIds: state.selectedWireIds })
+    const didDelete = result.deleted.nodeIds.length > 0 || result.deleted.wireIds.length > 0
+
+    if (!didDelete) {
+      set({ selectedNodeIds: [], selectedWireIds: [], selectionUpdatedAt: Date.now(), deleteUpdatedAt: Date.now() })
+      return false
+    }
+
+    const sim = simulate(result.circuit)
+    set({
+      history: pushHistory(state.history, buildHistorySnapshot(state)),
+      circuit: result.circuit,
+      outputs: sim.outputs,
+      lights: sim.lights,
+      selectedNodeIds: [],
+      selectedWireIds: [],
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+      deleteUpdatedAt: Date.now(),
+    })
+    return true
+  },
 
   undo: () => {
     const state = get()
@@ -221,6 +286,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       outputs: sim.outputs,
       lights: sim.lights,
       selectedNodeIds: result.snapshot.selectedNodeIds,
+      selectedWireIds: result.snapshot.selectedWireIds,
       openGroupId: result.snapshot.openGroupId,
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
@@ -240,6 +306,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       outputs: sim.outputs,
       lights: sim.lights,
       selectedNodeIds: result.snapshot.selectedNodeIds,
+      selectedWireIds: result.snapshot.selectedWireIds,
       openGroupId: result.snapshot.openGroupId,
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
@@ -397,6 +464,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         outputs: sim.outputs,
         lights: sim.lights,
         selectedNodeIds: groupId ? [groupId] : [],
+        selectedWireIds: [],
         selectionUpdatedAt: Date.now(),
         simulationUpdatedAt: Date.now(),
         openGroupId: null,
@@ -417,6 +485,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       outputs: sim.outputs,
       lights: sim.lights,
       selectedNodeIds: [draft.groupId],
+      selectedWireIds: [],
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
       notice: { message: 'Interface updated. Rewiring required.', kind: 'warning', updatedAt: Date.now() },
@@ -437,6 +506,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       outputs: sim.outputs,
       lights: sim.lights,
       selectedNodeIds: [],
+      selectedWireIds: [],
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
     })
@@ -484,14 +554,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => {
       const group = state.circuit.nodes.find((n) => n.type === 'group' && n.id === groupId)
       if (!group) return {}
-      return { openGroupId: groupId, selectedNodeIds: [], selectionUpdatedAt: Date.now() }
+      return { openGroupId: groupId, selectedNodeIds: [], selectedWireIds: [], selectionUpdatedAt: Date.now() }
     }),
 
   closeGroup: () =>
     set((state) => {
       if (!state.openGroupId) return {}
       const groupId = state.openGroupId
-      return { openGroupId: null, selectedNodeIds: [groupId], selectionUpdatedAt: Date.now() }
+      return { openGroupId: null, selectedNodeIds: [groupId], selectedWireIds: [], selectionUpdatedAt: Date.now() }
     }),
 
   exportCircuit: () => {
@@ -517,6 +587,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       challengeStatus: { state: 'idle' },
       currentChallengeTarget: undefined,
       selectedNodeIds: [],
+      selectedWireIds: [],
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
       openGroupId: null,
@@ -538,6 +609,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentChallengeTarget: target,
       challengeStatus: { id: challengeId, title, state: 'loaded', message: 'Challenge loaded. Adjust wiring and validate.' },
       selectedNodeIds: [],
+      selectedWireIds: [],
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
       openGroupId: null,
@@ -567,8 +639,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       outputs: {},
       lights: {},
       selectedNodeIds: [],
+      selectedWireIds: [],
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
+      deleteUpdatedAt: Date.now(),
       openGroupId: null,
       paletteDragging: null,
       notice: null,
@@ -583,10 +657,11 @@ if (typeof window !== 'undefined') {
   ;(window as Window & { __APP_STORE__?: typeof useAppStore }).__APP_STORE__ = useAppStore
 }
 
-function buildHistorySnapshot(state: { circuit: Circuit; selectedNodeIds: string[]; openGroupId: string | null }) {
+function buildHistorySnapshot(state: { circuit: Circuit; selectedNodeIds: string[]; selectedWireIds: string[]; openGroupId: string | null }) {
   return {
     circuit: state.circuit,
     selectedNodeIds: state.selectedNodeIds,
+    selectedWireIds: state.selectedWireIds,
     openGroupId: state.openGroupId,
   }
 }

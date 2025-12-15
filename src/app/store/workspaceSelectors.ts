@@ -52,6 +52,7 @@ let lastSelectionInput:
   | {
       nodes: CircuitNode[]
       selectedNodeIds: string[]
+      selectedWireIds: string[]
       selectionUpdatedAt: number
     }
   | undefined
@@ -61,6 +62,7 @@ export const selectSelectionState = (state: StoreState): SelectionState => {
   if (
     lastSelectionInput?.nodes === state.circuit.nodes &&
     lastSelectionInput?.selectedNodeIds === state.selectedNodeIds &&
+    lastSelectionInput?.selectedWireIds === state.selectedWireIds &&
     lastSelectionInput?.selectionUpdatedAt === state.selectionUpdatedAt &&
     lastSelectionOutput
   ) {
@@ -74,7 +76,7 @@ export const selectSelectionState = (state: StoreState): SelectionState => {
   const next: SelectionState = {
     selectedNodes,
     selectedGroups,
-    selectedWires: [],
+    selectedWires: state.selectedWireIds,
     focusId: selectedNodes[0] ?? selectedGroups[0] ?? null,
     updatedAt: state.selectionUpdatedAt,
   }
@@ -82,6 +84,7 @@ export const selectSelectionState = (state: StoreState): SelectionState => {
   lastSelectionInput = {
     nodes: state.circuit.nodes,
     selectedNodeIds: state.selectedNodeIds,
+    selectedWireIds: state.selectedWireIds,
     selectionUpdatedAt: state.selectionUpdatedAt,
   }
   lastSelectionOutput = next

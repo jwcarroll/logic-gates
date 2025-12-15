@@ -36,7 +36,7 @@ export function toReactFlowNodes(
       data: toLogicNodeData(node, outputs, lights, handlers),
       width: node.width,
       height: node.height,
-      selectable: true,
+      selectable: node.type !== 'junction',
     }))
 }
 

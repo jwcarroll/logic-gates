@@ -21,11 +21,14 @@ export const Toolbar = () => {
   const editSelectedGroupInterface = useAppStore((s) => s.editSelectedGroupInterface)
   const ungroupSelection = useAppStore((s) => s.ungroupSelection)
   const cloneSelectedGroup = useAppStore((s) => s.cloneSelectedGroup)
+  const deleteSelection = useAppStore((s) => s.deleteSelection)
   const addHalfAdderTemplate = useAppStore((s) => s.addHalfAdderTemplate)
   const selectedNodeIds = useAppStore((s) => s.selectedNodeIds)
+  const selectedWireIds = useAppStore((s) => s.selectedWireIds)
   const circuit = useAppStore((s) => s.circuit)
   const selectedGroupId = selectedNodeIds.find((id) => circuit.nodes.find((n) => n.id === id && n.type === 'group'))
   const hasGroupSelected = Boolean(selectedGroupId)
+  const selectedCount = selectedNodeIds.length + selectedWireIds.length
 
   const gateButtons = useMemo(
     () =>
@@ -75,6 +78,9 @@ export const Toolbar = () => {
         </button>
         <button className="toolbar-button" onClick={() => redo()} disabled={!canRedo}>
           Redo
+        </button>
+        <button className="toolbar-button" onClick={() => deleteSelection()} disabled={!selectedCount}>
+          Delete
         </button>
         <button className="toolbar-button" onClick={() => groupSelection()} disabled={!selectedNodeIds.length}>
           Group selected ({selectedNodeIds.length})

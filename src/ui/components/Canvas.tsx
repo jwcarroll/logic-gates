@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react'
-import ReactFlow, { Background, Controls, MiniMap, applyNodeChanges } from 'reactflow'
-import type { Connection, Edge, EdgeTypes, Node, NodeTypes, NodeChange, NodeMouseHandler } from 'reactflow'
+import ReactFlow, { Background, Controls, MiniMap, applyNodeChanges, useStoreApi } from 'reactflow'
+import type { Connection, Edge, EdgeChange, EdgeTypes, Node, NodeTypes, NodeChange, NodeMouseHandler, EdgeMouseHandler } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../app/store'
@@ -26,16 +26,41 @@ type Props = {
   onOpenGroup?: (groupId: string) => void
 }
 
+function InteractionResetter({ token }: { token: number }) {
+  const { setState } = useStoreApi()
+
+  useEffect(() => {
+    setState({
+      connectionNodeId: null,
+      connectionHandleId: null,
+      connectionHandleType: null,
+      connectionStatus: null,
+      connectionStartHandle: null,
+      connectionEndHandle: null,
+      connectionClickStartHandle: null,
+      nodesSelectionActive: false,
+      userSelectionActive: false,
+      userSelectionRect: null,
+      paneDragging: false,
+    })
+  }, [setState, token])
+
+  return null
+}
+
 export const Canvas = memo(({ viewGroupId = null, onOpenGroup }: Props) => {
   const circuit = useAppStore((s) => s.circuit)
   const outputsRaw = useAppStore((s) => s.outputs)
   const connectWire = useAppStore((s) => s.connectWire)
   const moveNodes = useAppStore((s) => s.moveNodes)
+  const moveEdges = useAppStore((s) => s.moveEdges)
   const toggleSwitch = useAppStore((s) => s.toggleSwitch)
   const lightsRaw = useAppStore((s) => s.lights)
   const dragState = useAppStore((s) => s.paletteDragging)
   const dropAt = useAppStore((s) => s.dropAt)
   const selectNodes = useAppStore((s) => s.selectNodes)
+  const selectWires = useAppStore((s) => s.selectWires)
+  const deleteUpdatedAt = useAppStore((s) => s.deleteUpdatedAt)
   const selection = useAppStore(useShallow(selectSelectionState))
   const simulationUpdatedAt = useAppStore((s) => s.simulationUpdatedAt)
   const [error, setError] = useState<string | null>(null)
@@ -87,6 +112,7 @@ export const Canvas = memo(({ viewGroupId = null, onOpenGroup }: Props) => {
   }, [energizedAnimation.throttleMs, simulationUpdatedAt])
 
   const selectedSet = useMemo(() => new Set([...selection.selectedNodes, ...selection.selectedGroups]), [selection.selectedGroups, selection.selectedNodes])
+  const selectedWireSet = useMemo(() => new Set(selection.selectedWires), [selection.selectedWires])
 
   const nodes = useMemo<Node[]>(() => {
     const base = toReactFlowNodes(circuit, outputs, lights, { onToggleSwitch: toggleSwitch }, { groupId: viewGroupId })
@@ -102,9 +128,9 @@ export const Canvas = memo(({ viewGroupId = null, onOpenGroup }: Props) => {
       const energized = view?.energized ?? false
       const reverse = view?.direction === 'reverse'
       const className = `workspace-wire${energized ? ' workspace-wire--energized' : ''}${reverse ? ' workspace-wire--reverse' : ''}`
-      return { ...edge, className }
+      return { ...edge, className, selected: selectedWireSet.has(edge.id) }
     })
-  }, [circuit, viewGroupId, wireById])
+  }, [circuit, selectedWireSet, viewGroupId, wireById])
 
   const handleConnect = (connection: Connection) => {
     if (!connection.source || !connection.target) return
@@ -116,6 +142,10 @@ export const Canvas = memo(({ viewGroupId = null, onOpenGroup }: Props) => {
   const handleNodesChange = (changes: NodeChange[]) => {
     moveNodes(changes)
     applyNodeChanges(changes, nodes)
+  }
+
+  const handleEdgesChange = (changes: EdgeChange[]) => {
+    moveEdges(changes)
   }
 
   const handleDrop: React.DragEventHandler = (event) => {
@@ -134,12 +164,21 @@ export const Canvas = memo(({ viewGroupId = null, onOpenGroup }: Props) => {
   const handleNodeClick: NodeMouseHandler = (event, node) => {
     event.stopPropagation()
     const multi = event.shiftKey || event.metaKey || event.ctrlKey
-    selectNodes((prev) => {
-      if (multi) {
-        return Array.from(new Set([...prev, node.id]))
-      }
-      return [node.id]
-    })
+    selectNodes((prev) => (multi ? Array.from(new Set([...prev, node.id])) : [node.id]))
+    if (!multi) {
+      selectWires([])
+    }
+  }
+
+  const handleEdgeClick: EdgeMouseHandler = (event, edge) => {
+    event.stopPropagation()
+    const multi = event.shiftKey || event.metaKey || event.ctrlKey
+    if (multi) {
+      selectWires((prev) => Array.from(new Set([...prev, edge.id])))
+      return
+    }
+    selectNodes([])
+    selectWires([edge.id])
   }
 
   const handleNodeDoubleClick: NodeMouseHandler = (_event, node) => {
@@ -159,17 +198,19 @@ export const Canvas = memo(({ viewGroupId = null, onOpenGroup }: Props) => {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
-        onEdgesChange={() => undefined}
+        onEdgesChange={handleEdgesChange}
         onConnect={handleConnect}
         selectionOnDrag
         elementsSelectable
         selectNodesOnDrag
         multiSelectionKeyCode="Shift"
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
         fitView
         fitViewOptions={{ padding: 0.2 }}
       >
+        <InteractionResetter token={deleteUpdatedAt} />
         <Background gap={20} />
         <Controls />
         <MiniMap pannable zoomable />
