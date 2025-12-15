@@ -46,6 +46,55 @@ export function disconnect(circuit: Circuit, wireId: string): Result<Circuit> {
   return { ok: true, value: { ...circuit, wires } }
 }
 
+export type DeleteSelectionInput = {
+  nodeIds: string[]
+  wireIds: string[]
+}
+
+export type DeleteSelectionResult = {
+  circuit: Circuit
+  deleted: { nodeIds: string[]; wireIds: string[] }
+}
+
+export function deleteSelection(circuit: Circuit, input: DeleteSelectionInput): DeleteSelectionResult {
+  const nodeById = new Map(circuit.nodes.map((n) => [n.id, n]))
+  const requestedNodeIds = new Set(input.nodeIds.filter((id) => nodeById.has(id)))
+
+  // Expand group deletions recursively: deleting a group deletes all of its children.
+  const expandedNodeIds = new Set<string>(requestedNodeIds)
+  const queue = [...requestedNodeIds]
+  while (queue.length) {
+    const id = queue.pop()!
+    const node = nodeById.get(id)
+    if (!node || node.type !== 'group') continue
+    for (const childId of node.data.childNodeIds) {
+      if (!expandedNodeIds.has(childId) && nodeById.has(childId)) {
+        expandedNodeIds.add(childId)
+        queue.push(childId)
+      }
+    }
+  }
+
+  const wireById = new Map(circuit.wires.map((w) => [w.id, w]))
+  const requestedWireIds = new Set(input.wireIds.filter((id) => wireById.has(id)))
+
+  // Cascading deletion: deleting any node deletes all incident wires.
+  const expandedWireIds = new Set<string>(requestedWireIds)
+  for (const wire of circuit.wires) {
+    if (expandedNodeIds.has(wire.sourceNode) || expandedNodeIds.has(wire.targetNode)) {
+      expandedWireIds.add(wire.id)
+    }
+  }
+
+  const deletedNodeIds = circuit.nodes.filter((n) => expandedNodeIds.has(n.id)).map((n) => n.id)
+  const deletedWireIds = circuit.wires.filter((w) => expandedWireIds.has(w.id)).map((w) => w.id)
+
+  const remainingNodes = circuit.nodes.filter((n) => !expandedNodeIds.has(n.id))
+  const remainingWires = circuit.wires.filter((w) => !expandedWireIds.has(w.id))
+
+  return { circuit: { ...circuit, nodes: remainingNodes, wires: remainingWires }, deleted: { nodeIds: deletedNodeIds, wireIds: deletedWireIds } }
+}
+
 interface GroupInput {
   nodeIds: string[]
   label: string

@@ -13,6 +13,12 @@ vi.mock('reactflow', () => {
     Controls: () => null,
     MiniMap: () => null,
     applyNodeChanges: vi.fn(),
+    useStoreApi: () => ({
+      setState: vi.fn(),
+      getState: () => ({}),
+      subscribe: () => () => {},
+      destroy: () => {},
+    }),
   }
 })
 

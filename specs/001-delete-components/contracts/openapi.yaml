@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Logic Gates Editor Contracts
+  version: 1.0.0
+  description: |
+    Contracts for editor actions. These describe the shape of inputs/outputs for
+    user-driven circuit edits, independent of any UI framework.
+
+paths:
+  /workspace/delete-selection:
+    post:
+      operationId: deleteSelection
+      summary: Delete the current selection (nodes and/or wires)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteSelectionRequest'
+      responses:
+        '200':
+          description: Selection deleted successfully (or no-op if empty/unknown ids)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteSelectionResponse'
+        '400':
+          description: Request is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    DeleteSelectionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        circuitId:
+          type: string
+          description: Optional identifier for the current circuit/workspace.
+        nodeIds:
+          type: array
+          items:
+            type: string
+          description: Node ids to delete (gates, switches, lights, groups).
+          default: []
+        wireIds:
+          type: array
+          items:
+            type: string
+          description: Wire ids to delete.
+          default: []
+      required:
+        - nodeIds
+        - wireIds
+
+    DeleteSelectionResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        circuit:
+          $ref: '#/components/schemas/Circuit'
+        deleted:
+          type: object
+          additionalProperties: false
+          properties:
+            nodeIds:
+              type: array
+              items:
+                type: string
+            wireIds:
+              type: array
+              items:
+                type: string
+          required:
+            - nodeIds
+            - wireIds
+      required:
+        - circuit
+        - deleted
+
+    Circuit:
+      type: object
+      additionalProperties: false
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CircuitNode'
+        wires:
+          type: array
+          items:
+            $ref: '#/components/schemas/Wire'
+      required:
+        - nodes
+        - wires
+
+    CircuitNode:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [switch, gate, light, group, junction]
+        position:
+          $ref: '#/components/schemas/Position'
+        width:
+          type: number
+        height:
+          type: number
+        groupId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - type
+        - position
+        - width
+        - height
+
+    Wire:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+          description: Source port id.
+        target:
+          type: string
+          description: Target port id.
+        sourceNode:
+          type: string
+        targetNode:
+          type: string
+      required:
+        - id
+        - source
+        - target
+        - sourceNode
+        - targetNode
+
+    Position:
+      type: object
+      additionalProperties: false
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+      required:
+        - x
+        - y
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+      required:
+        - error
