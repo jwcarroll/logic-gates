@@ -36,4 +36,10 @@ export default defineConfig([
       'no-restricted-syntax': 'off',
     },
   },
+  {
+    files: ['src/tests/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ])

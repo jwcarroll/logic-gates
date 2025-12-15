@@ -1,5 +1,6 @@
 import './App.css'
 import { Toolbar } from './ui/components/Toolbar'
+import { GroupInterfaceEditor } from './ui/components/GroupInterfaceEditor'
 import { ChallengePanel } from './ui/pages/ChallengePanel'
 import { loadSettings } from './app/settings/settings'
 import { getAppVersion, getAppEnvironment } from './core/version'
@@ -42,6 +43,7 @@ function App() {
       <main className="app-main">
         <aside className="app-sidebar">
           <Toolbar />
+          <GroupInterfaceEditor />
           <ChallengePanel />
         </aside>
         <section className="app-canvas">

@@ -10,16 +10,22 @@ export const Toolbar = () => {
   const addGate = useAppStore((s) => s.addGate)
   const startDrag = useAppStore((s) => s.startDrag)
   const cancelDrag = useAppStore((s) => s.cancelDrag)
+  const undo = useAppStore((s) => s.undo)
+  const redo = useAppStore((s) => s.redo)
+  const canUndo = useAppStore((s) => s.history.past.length > 0)
+  const canRedo = useAppStore((s) => s.history.future.length > 0)
   const reset = useAppStore((s) => s.reset)
   const exportCircuit = useAppStore((s) => s.exportCircuit)
   const importCircuit = useAppStore((s) => s.importCircuit)
   const groupSelection = useAppStore((s) => s.groupSelection)
+  const editSelectedGroupInterface = useAppStore((s) => s.editSelectedGroupInterface)
   const ungroupSelection = useAppStore((s) => s.ungroupSelection)
   const cloneSelectedGroup = useAppStore((s) => s.cloneSelectedGroup)
   const addHalfAdderTemplate = useAppStore((s) => s.addHalfAdderTemplate)
   const selectedNodeIds = useAppStore((s) => s.selectedNodeIds)
   const circuit = useAppStore((s) => s.circuit)
-  const hasGroupSelected = selectedNodeIds.some((id) => circuit.nodes.find((n) => n.id === id && n.type === 'group'))
+  const selectedGroupId = selectedNodeIds.find((id) => circuit.nodes.find((n) => n.id === id && n.type === 'group'))
+  const hasGroupSelected = Boolean(selectedGroupId)
 
   const gateButtons = useMemo(
     () =>
@@ -64,8 +70,17 @@ export const Toolbar = () => {
       </div>
       <div className="toolbar-section">
         <h3>Actions</h3>
+        <button className="toolbar-button" onClick={() => undo()} disabled={!canUndo}>
+          Undo
+        </button>
+        <button className="toolbar-button" onClick={() => redo()} disabled={!canRedo}>
+          Redo
+        </button>
         <button className="toolbar-button" onClick={() => groupSelection()} disabled={!selectedNodeIds.length}>
           Group selected ({selectedNodeIds.length})
+        </button>
+        <button className="toolbar-button" onClick={() => editSelectedGroupInterface()} disabled={!hasGroupSelected}>
+          Edit interface
         </button>
         <button className="toolbar-button" onClick={() => cloneSelectedGroup()} disabled={!hasGroupSelected}>
           Clone selected group
@@ -101,7 +116,7 @@ export const Toolbar = () => {
               if (!result.ok) {
                 alert(`Import failed: ${(result.errors || []).join(', ')}`)
               }
-            } catch (err) {
+            } catch {
               alert('Invalid JSON')
             }
           }}

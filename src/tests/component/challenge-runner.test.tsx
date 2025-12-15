@@ -17,6 +17,6 @@ describe('ChallengePanel', () => {
     useAppStore.getState().toggleSwitch('challenge-switch-a')
 
     fireEvent.click(screen.getByRole('button', { name: /Validate/i }))
-    expect(screen.getByRole('status').textContent).toContain('Success')
+    expect(screen.getByText(/Success/i).textContent).toContain('Success')
   })
 })

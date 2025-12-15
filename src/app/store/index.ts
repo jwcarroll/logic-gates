@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { createGateNode, createLightNode, createSwitchNode } from '../../core/factories'
-import { cloneGroup, connect, groupNodes, ungroup } from '../../core/commands'
+import { cloneGroup, connect, createGroup, ungroup, updateGroupInterface } from '../../core/commands'
+import { makeId } from '../../core/ids'
 import { simulate } from '../../core/simulation'
-import type { Circuit, CircuitNode, GateType, Position } from '../../core/types'
+import type { Circuit, CircuitNode, GateType, JunctionNode, Position } from '../../core/types'
 import type { Connection, NodeChange } from 'reactflow'
 import type { CircuitExport } from '../../core/io/schema'
 import { exportCircuit as buildExport, importCircuit as parseImport } from '../../core/io/importExport'
@@ -10,6 +11,10 @@ import type { ChallengeTarget } from '../../core/commands/challengeCommands'
 import { evaluateChallenge } from '../../core/commands/challengeCommands'
 import { getChallengeById } from '../challenges/challengeService'
 import { reportGraphErrors, reportImportError } from '../logging/errorReporting'
+import { buildDefaultGroupInterfaceDraft } from '../../core/groupInterfaceDraft'
+import type { GroupInterface } from '../../core/types'
+import { validateGroupInterfaceDraft } from './groupInterfaceDraft'
+import { createEmptyHistory, pushHistory, redoHistory, undoHistory } from './history'
 
 const INITIAL_POSITION: Position = { x: 100, y: 100 }
 
@@ -26,6 +31,22 @@ interface AppState {
   selectionUpdatedAt: number
   simulationUpdatedAt: number
   openGroupId: string | null
+  notice: { message: string; kind: 'info' | 'warning'; updatedAt: number } | null
+  history: ReturnType<typeof createEmptyHistory>
+  groupInterfaceDraft: {
+    mode: 'create'
+    label: string
+    nodeIds: string[]
+    interfaceDraft: GroupInterface
+    available: { inputs: string[]; outputs: string[] }
+    errors: string[]
+  } | {
+    mode: 'edit'
+    groupId: string
+    interfaceDraft: GroupInterface
+    available: { inputs: string[]; outputs: string[] }
+    errors: string[]
+  } | null
   paletteDragging: { type: 'switch' | 'gate' | 'light' | null; gateType?: GateType } | null
   challengeStatus: {
     id?: string
@@ -43,7 +64,18 @@ interface AppState {
   connectWire: (connection: Connection) => boolean
   moveNodes: (changes: NodeChange[]) => void
   selectNodes: (ids: string[] | ((prev: string[]) => string[])) => void
+  undo: () => boolean
+  redo: () => boolean
   groupSelection: (label?: string, nodeIds?: string[]) => { ok: boolean; errors?: string[] }
+  editSelectedGroupInterface: () => { ok: boolean; errors?: string[] }
+  cancelGroupInterfaceDraft: () => void
+  updateGroupInterfaceDraftLabel: (label: string) => void
+  addGroupInterfaceDraftPort: (kind: 'input' | 'output') => void
+  removeGroupInterfaceDraftPort: (kind: 'input' | 'output', portId: string) => void
+  moveGroupInterfaceDraftPort: (kind: 'input' | 'output', portId: string, delta: -1 | 1) => void
+  updateGroupInterfaceDraftPortName: (kind: 'input' | 'output', portId: string, name: string) => void
+  updateGroupInterfaceDraftPortMapping: (kind: 'input' | 'output', portId: string, mapsToInternalPortId: string) => void
+  confirmGroupInterfaceDraft: () => { ok: boolean; errors?: string[] }
   ungroupSelection: () => { ok: boolean; errors?: string[] }
   cloneSelectedGroup: () => { ok: boolean; errors?: string[] }
   addHalfAdderTemplate: () => void
@@ -65,6 +97,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectionUpdatedAt: Date.now(),
   simulationUpdatedAt: Date.now(),
   openGroupId: null,
+  notice: null,
+  history: createEmptyHistory(),
+  groupInterfaceDraft: null,
   paletteDragging: null,
   challengeStatus: { state: 'idle' },
   currentChallengeTarget: undefined,
@@ -118,7 +153,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   connectWire: (connection) => {
-    const { circuit } = get()
+    const state = get()
+    const { circuit } = state
     const { source, target, sourceHandle, targetHandle } = connection
     if (!source || !target || !sourceHandle || !targetHandle) return false
     const result = connect(circuit, {
@@ -132,7 +168,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       return false
     }
     const { outputs, lights } = simulate(result.value)
-    set({ circuit: result.value, outputs, lights, simulationUpdatedAt: Date.now() })
+    set({
+      history: pushHistory(state.history, buildHistorySnapshot(state)),
+      circuit: result.value,
+      outputs,
+      lights,
+      simulationUpdatedAt: Date.now(),
+    })
     return true
   },
 
@@ -167,23 +209,218 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { selectedNodeIds: next, selectionUpdatedAt: Date.now() }
     }),
 
+  undo: () => {
+    const state = get()
+    const current = buildHistorySnapshot(state)
+    const result = undoHistory(state.history, current)
+    if (!result) return false
+    const sim = simulate(result.snapshot.circuit)
+    set({
+      history: result.history,
+      circuit: result.snapshot.circuit,
+      outputs: sim.outputs,
+      lights: sim.lights,
+      selectedNodeIds: result.snapshot.selectedNodeIds,
+      openGroupId: result.snapshot.openGroupId,
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+    })
+    return true
+  },
+
+  redo: () => {
+    const state = get()
+    const current = buildHistorySnapshot(state)
+    const result = redoHistory(state.history, current)
+    if (!result) return false
+    const sim = simulate(result.snapshot.circuit)
+    set({
+      history: result.history,
+      circuit: result.snapshot.circuit,
+      outputs: sim.outputs,
+      lights: sim.lights,
+      selectedNodeIds: result.snapshot.selectedNodeIds,
+      openGroupId: result.snapshot.openGroupId,
+      selectionUpdatedAt: Date.now(),
+      simulationUpdatedAt: Date.now(),
+    })
+    return true
+  },
+
   groupSelection: (label = 'Group', nodeIds?: string[]) => {
     const state = get()
     const targets = nodeIds ?? state.selectedNodeIds
     const existingTargets = targets.filter((id) => state.circuit.nodes.some((n) => n.id === id))
     if (!existingTargets.length) return { ok: false, errors: ['No nodes selected to group'] }
-    const result = groupNodes(state.circuit, { nodeIds: existingTargets, label })
-    if (!result.ok || !result.value) return { ok: false, errors: result.errors }
-    const sim = simulate(result.value)
-    const groupId = findLatestGroupId(result.value)
+    const draft = buildDefaultGroupInterfaceDraft(state.circuit, existingTargets)
+    if (!draft.ok || !draft.value) return { ok: false, errors: draft.errors }
+
+    const available = collectAvailableInternalPorts(state.circuit, existingTargets)
+    const errors = validateGroupInterfaceDraft(draft.value)
+
     set({
-      circuit: result.value,
+      groupInterfaceDraft: {
+        mode: 'create',
+        label,
+        nodeIds: existingTargets,
+        interfaceDraft: draft.value,
+        available,
+        errors,
+      },
+    })
+
+    return { ok: true }
+  },
+
+  editSelectedGroupInterface: () => {
+    const state = get()
+    const groupId = state.selectedNodeIds.find((id) => state.circuit.nodes.find((n) => n.id === id && n.type === 'group') !== undefined)
+    if (!groupId) return { ok: false, errors: ['No group selected'] }
+    const group = state.circuit.nodes.find((n) => n.type === 'group' && n.id === groupId)
+    if (!group || group.type !== 'group') return { ok: false, errors: ['Group not found'] }
+
+    const junctions = state.circuit.nodes.filter((n): n is JunctionNode => n.type === 'junction' && n.groupId === groupId)
+    const available = {
+      inputs: junctions.map((j) => j.data.outputPortId),
+      outputs: junctions.map((j) => j.data.inputPortId),
+    }
+    const errors = validateGroupInterfaceDraft(group.data.interface)
+    set({
+      groupInterfaceDraft: {
+        mode: 'edit',
+        groupId,
+        interfaceDraft: group.data.interface,
+        available,
+        errors,
+      },
+    })
+    return { ok: true }
+  },
+
+  cancelGroupInterfaceDraft: () => set({ groupInterfaceDraft: null }),
+  updateGroupInterfaceDraftLabel: (label) =>
+    set((state) => {
+      const draft = state.groupInterfaceDraft
+      if (!draft || draft.mode !== 'create') return {}
+      return { groupInterfaceDraft: { ...draft, label } }
+    }),
+  addGroupInterfaceDraftPort: (kind) =>
+    set((state) => {
+      if (!state.groupInterfaceDraft) return {}
+      const nextId = kind === 'input' ? makeId('group-in') : makeId('group-out')
+      const nextPort = { id: nextId, kind, name: '', mapsToInternalPortId: '' }
+      const interfaceDraft =
+        kind === 'input'
+          ? { ...state.groupInterfaceDraft.interfaceDraft, inputs: [...state.groupInterfaceDraft.interfaceDraft.inputs, nextPort] }
+          : { ...state.groupInterfaceDraft.interfaceDraft, outputs: [...state.groupInterfaceDraft.interfaceDraft.outputs, nextPort] }
+      const errors = validateGroupInterfaceDraft(interfaceDraft)
+      return { groupInterfaceDraft: { ...state.groupInterfaceDraft, interfaceDraft, errors } }
+    }),
+  removeGroupInterfaceDraftPort: (kind, portId) =>
+    set((state) => {
+      if (!state.groupInterfaceDraft) return {}
+      const interfaceDraft =
+        kind === 'input'
+          ? { ...state.groupInterfaceDraft.interfaceDraft, inputs: state.groupInterfaceDraft.interfaceDraft.inputs.filter((p) => p.id !== portId) }
+          : { ...state.groupInterfaceDraft.interfaceDraft, outputs: state.groupInterfaceDraft.interfaceDraft.outputs.filter((p) => p.id !== portId) }
+      const errors = validateGroupInterfaceDraft(interfaceDraft)
+      return { groupInterfaceDraft: { ...state.groupInterfaceDraft, interfaceDraft, errors } }
+    }),
+  moveGroupInterfaceDraftPort: (kind, portId, delta) =>
+    set((state) => {
+      if (!state.groupInterfaceDraft) return {}
+      const list = kind === 'input' ? [...state.groupInterfaceDraft.interfaceDraft.inputs] : [...state.groupInterfaceDraft.interfaceDraft.outputs]
+      const idx = list.findIndex((p) => p.id === portId)
+      const nextIdx = idx + delta
+      if (idx < 0 || nextIdx < 0 || nextIdx >= list.length) return {}
+      const [moved] = list.splice(idx, 1)
+      list.splice(nextIdx, 0, moved)
+      const interfaceDraft = kind === 'input' ? { ...state.groupInterfaceDraft.interfaceDraft, inputs: list } : { ...state.groupInterfaceDraft.interfaceDraft, outputs: list }
+      const errors = validateGroupInterfaceDraft(interfaceDraft)
+      return { groupInterfaceDraft: { ...state.groupInterfaceDraft, interfaceDraft, errors } }
+    }),
+  updateGroupInterfaceDraftPortName: (kind, portId, name) =>
+    set((state) => {
+      if (!state.groupInterfaceDraft) return {}
+      const interfaceDraft =
+        kind === 'input'
+          ? {
+              ...state.groupInterfaceDraft.interfaceDraft,
+              inputs: state.groupInterfaceDraft.interfaceDraft.inputs.map((p) => (p.id === portId ? { ...p, name } : p)),
+            }
+          : {
+              ...state.groupInterfaceDraft.interfaceDraft,
+              outputs: state.groupInterfaceDraft.interfaceDraft.outputs.map((p) => (p.id === portId ? { ...p, name } : p)),
+            }
+      const errors = validateGroupInterfaceDraft(interfaceDraft)
+      return { groupInterfaceDraft: { ...state.groupInterfaceDraft, interfaceDraft, errors } }
+    }),
+  updateGroupInterfaceDraftPortMapping: (kind, portId, mapsToInternalPortId) =>
+    set((state) => {
+      if (!state.groupInterfaceDraft) return {}
+      const interfaceDraft =
+        kind === 'input'
+          ? {
+              ...state.groupInterfaceDraft.interfaceDraft,
+              inputs: state.groupInterfaceDraft.interfaceDraft.inputs.map((p) => (p.id === portId ? { ...p, mapsToInternalPortId } : p)),
+            }
+          : {
+              ...state.groupInterfaceDraft.interfaceDraft,
+              outputs: state.groupInterfaceDraft.interfaceDraft.outputs.map((p) => (p.id === portId ? { ...p, mapsToInternalPortId } : p)),
+            }
+      const errors = validateGroupInterfaceDraft(interfaceDraft)
+      return { groupInterfaceDraft: { ...state.groupInterfaceDraft, interfaceDraft, errors } }
+    }),
+  confirmGroupInterfaceDraft: () => {
+    const state = get()
+    const draft = state.groupInterfaceDraft
+    if (!draft) return { ok: false, errors: ['No active group interface draft'] }
+    const errors = validateGroupInterfaceDraft(draft.interfaceDraft)
+    if (errors.length) {
+      set({ groupInterfaceDraft: { ...draft, errors } as AppState['groupInterfaceDraft'] })
+      return { ok: false, errors }
+    }
+
+    if (draft.mode === 'create') {
+      const result = createGroup(state.circuit, {
+        nodeIds: draft.nodeIds,
+        label: draft.label,
+        collapsed: true,
+        interfaceDraft: draft.interfaceDraft,
+      })
+      if (!result.ok || !result.value) return { ok: false, errors: result.errors }
+      const sim = simulate(result.value)
+      const groupId = findLatestGroupId(result.value)
+      set({
+        history: pushHistory(state.history, buildHistorySnapshot(state)),
+        circuit: result.value,
+        outputs: sim.outputs,
+        lights: sim.lights,
+        selectedNodeIds: groupId ? [groupId] : [],
+        selectionUpdatedAt: Date.now(),
+        simulationUpdatedAt: Date.now(),
+        openGroupId: null,
+        groupInterfaceDraft: null,
+      })
+      return { ok: true }
+    }
+
+    const update = updateGroupInterface(state.circuit, draft.groupId, draft.interfaceDraft)
+    if (!update.ok || !update.value) {
+      set({ groupInterfaceDraft: { ...draft, errors: update.errors ?? ['Interface update failed'] } })
+      return { ok: false, errors: update.errors }
+    }
+    const sim = simulate(update.value.circuit)
+    set({
+      history: pushHistory(state.history, buildHistorySnapshot(state)),
+      circuit: update.value.circuit,
       outputs: sim.outputs,
       lights: sim.lights,
-      selectedNodeIds: groupId ? [groupId] : [],
+      selectedNodeIds: [draft.groupId],
       selectionUpdatedAt: Date.now(),
       simulationUpdatedAt: Date.now(),
-      openGroupId: null,
+      notice: { message: 'Interface updated. Rewiring required.', kind: 'warning', updatedAt: Date.now() },
+      groupInterfaceDraft: null,
     })
     return { ok: true }
   },
@@ -260,7 +497,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   exportCircuit: () => {
     const result = buildExport(get().circuit)
     if (!result.ok || !result.value) {
-      return { version: '1.1' as const, circuit: emptyCircuit }
+      return { version: '1.2' as const, circuit: emptyCircuit }
     }
     return result.value
   },
@@ -334,6 +571,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       simulationUpdatedAt: Date.now(),
       openGroupId: null,
       paletteDragging: null,
+      notice: null,
+      history: createEmptyHistory(),
       challengeStatus: { state: 'idle' },
       currentChallengeTarget: undefined,
     }),
@@ -341,7 +580,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
 if (typeof window !== 'undefined') {
   // Expose store for Playwright/browser E2E hooks
-  ;(window as any).__APP_STORE__ = useAppStore
+  ;(window as Window & { __APP_STORE__?: typeof useAppStore }).__APP_STORE__ = useAppStore
+}
+
+function buildHistorySnapshot(state: { circuit: Circuit; selectedNodeIds: string[]; openGroupId: string | null }) {
+  return {
+    circuit: state.circuit,
+    selectedNodeIds: state.selectedNodeIds,
+    openGroupId: state.openGroupId,
+  }
 }
 
 function findLatestGroupId(circuit: Circuit): string {
@@ -349,12 +596,79 @@ function findLatestGroupId(circuit: Circuit): string {
   return groups.length ? groups[groups.length - 1].id : ''
 }
 
+function collectAvailableInternalPorts(circuit: Circuit, nodeIds: string[]) {
+  const selected = new Set(nodeIds)
+  const inputs: string[] = []
+  const outputs: string[] = []
+  circuit.nodes.forEach((node) => {
+    if (!selected.has(node.id)) return
+    switch (node.type) {
+      case 'light':
+        inputs.push(node.data.inputPortId)
+        break
+      case 'gate':
+        inputs.push(...node.data.inputPortIds)
+        outputs.push(node.data.outputPortId)
+        break
+      case 'switch':
+        outputs.push(node.data.outputPortId)
+        break
+      case 'junction':
+        inputs.push(node.data.inputPortId)
+        outputs.push(node.data.outputPortId)
+        break
+      case 'group':
+        inputs.push(...node.data.interface.inputs.map((p) => p.id))
+        outputs.push(...node.data.interface.outputs.map((p) => p.id))
+        break
+    }
+  })
+  return { inputs, outputs }
+}
+
 function buildHalfAdderTemplate(): Circuit {
-  const xorGate = createGateNode('XOR', { x: 100, y: 100 })
-  const andGate = createGateNode('AND', { x: 180, y: 160 })
-  const circuit: Circuit = { nodes: [xorGate, andGate], wires: [] }
-  const grouped = groupNodes(circuit, { nodeIds: [xorGate.id, andGate.id], label: 'Half Adder' })
-  return grouped.ok && grouped.value ? grouped.value : circuit
+  const swA = createSwitchNode({ x: 40, y: 120 })
+  const swB = createSwitchNode({ x: 40, y: 220 })
+  swA.data.label = 'A'
+  swB.data.label = 'B'
+
+  const xorGate = createGateNode('XOR', { x: 200, y: 140 })
+  const andGate = createGateNode('AND', { x: 220, y: 240 })
+
+  const circuit: Circuit = {
+    nodes: [swA, swB, xorGate, andGate],
+    wires: [
+      // A feeds XOR.in0 + AND.in0
+      { id: makeId('wire'), source: swA.data.outputPortId, sourceNode: swA.id, target: xorGate.data.inputPortIds[0], targetNode: xorGate.id },
+      { id: makeId('wire'), source: swA.data.outputPortId, sourceNode: swA.id, target: andGate.data.inputPortIds[0], targetNode: andGate.id },
+      // B feeds XOR.in1 + AND.in1
+      { id: makeId('wire'), source: swB.data.outputPortId, sourceNode: swB.id, target: xorGate.data.inputPortIds[1], targetNode: xorGate.id },
+      { id: makeId('wire'), source: swB.data.outputPortId, sourceNode: swB.id, target: andGate.data.inputPortIds[1], targetNode: andGate.id },
+    ],
+  }
+
+  const grouped = createGroup(circuit, {
+    nodeIds: [xorGate.id, andGate.id],
+    label: 'Half Adder',
+    collapsed: true,
+    interfaceDraft: {
+      inputs: [
+        { id: makeId('group-in'), kind: 'input', name: 'A', mapsToInternalPortId: xorGate.data.inputPortIds[0] },
+        { id: makeId('group-in'), kind: 'input', name: 'B', mapsToInternalPortId: xorGate.data.inputPortIds[1] },
+      ],
+      outputs: [
+        { id: makeId('group-out'), kind: 'output', name: 'SUM', mapsToInternalPortId: xorGate.data.outputPortId },
+        { id: makeId('group-out'), kind: 'output', name: 'CARRY', mapsToInternalPortId: andGate.data.outputPortId },
+      ],
+    },
+  })
+
+  if (!grouped.ok || !grouped.value) return circuit
+
+  // Remove the temporary switches and their external wires; keep the grouped half-adder as a reusable subcircuit template.
+  const cleanedNodes = grouped.value.nodes.filter((n) => n.id !== swA.id && n.id !== swB.id)
+  const cleanedWires = grouped.value.wires.filter((w) => w.sourceNode !== swA.id && w.sourceNode !== swB.id && w.targetNode !== swA.id && w.targetNode !== swB.id)
+  return { ...grouped.value, nodes: cleanedNodes, wires: cleanedWires }
 }
 
 function nextPosition(index: number): Position {

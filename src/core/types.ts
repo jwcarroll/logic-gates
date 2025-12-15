@@ -1,6 +1,6 @@
 export type GateType = 'AND' | 'OR' | 'NOT' | 'NAND' | 'NOR' | 'XOR' | 'XNOR'
 
-export type NodeKind = 'switch' | 'gate' | 'light' | 'group'
+export type NodeKind = 'switch' | 'gate' | 'light' | 'group' | 'junction'
 export type PortKind = 'input' | 'output'
 
 export interface Position {
@@ -56,14 +56,22 @@ export interface GroupNode extends BaseNode {
   data: {
     label: string
     childNodeIds: string[]
-    inputPortIds: string[]
-    outputPortIds: string[]
     collapsed: boolean
+    interface: GroupInterface
     portMap: GroupPortMap
   }
 }
 
-export type CircuitNode = SwitchNode | GateNode | LightNode | GroupNode
+export interface JunctionNode extends BaseNode {
+  type: 'junction'
+  data: {
+    label?: string
+    inputPortId: string
+    outputPortId: string
+  }
+}
+
+export type CircuitNode = SwitchNode | GateNode | LightNode | GroupNode | JunctionNode
 
 export interface Wire {
   id: string
@@ -96,6 +104,18 @@ export interface SimulationResult {
 export interface GroupPortMap {
   inputs: Record<string, string> // group port id -> internal port id
   outputs: Record<string, string> // group port id -> internal port id
+}
+
+export interface GroupInterface {
+  inputs: ExposedPort[]
+  outputs: ExposedPort[]
+}
+
+export interface ExposedPort {
+  id: string
+  kind: PortKind
+  name: string
+  mapsToInternalPortId: string
 }
 
 export interface Result<T> {

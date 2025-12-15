@@ -1,4 +1,4 @@
-import type { FC } from 'react'
+import { Fragment, type FC } from 'react'
 import { Handle, Position, type NodeProps } from 'reactflow'
 
 interface LogicNodeData {
@@ -6,10 +6,11 @@ interface LogicNodeData {
   meta?: string
   inputs: string[]
   outputs: string[]
-  kind: 'switch' | 'gate' | 'light' | 'group'
+  kind: 'switch' | 'gate' | 'light' | 'group' | 'junction'
   gateType?: string
   switchState?: boolean
   lightState?: boolean
+  portLabels?: Record<string, string>
   inputStates: Record<string, boolean | undefined>
   outputStates: Record<string, boolean | undefined>
   onToggle?: () => void
@@ -48,35 +49,47 @@ export const LogicNode: FC<NodeProps<LogicNodeData>> = ({ data, selected }) => {
   }
 
   return (
-    <div className={`logic-node ${selected ? 'logic-node--selected' : ''}`}>
+    <div className={`logic-node ${data.kind === 'junction' ? 'logic-node--junction' : ''} ${selected ? 'logic-node--selected' : ''}`}>
       {renderHeader()}
       <div className="logic-node__ports">
         <div className="logic-node__ports-col">
-          {data.inputs.map((portId) => (
-            <Handle
-              key={portId}
-              id={portId}
-              type="target"
-              position={Position.Left}
-              style={inputStyle(data.inputs.indexOf(portId))}
-              className={`logic-node__handle logic-node__handle--input ${
-                data.inputStates[portId] ? 'logic-node__handle--active' : ''
-              }`}
-            />
+          {data.inputs.map((portId, idx) => (
+            <Fragment key={portId}>
+              {data.portLabels?.[portId] ? (
+                <div className="logic-node__port-label logic-node__port-label--input" style={inputStyle(idx)}>
+                  {data.portLabels[portId]}
+                </div>
+              ) : null}
+              <Handle
+                id={portId}
+                type="target"
+                position={Position.Left}
+                style={inputStyle(idx)}
+                className={`logic-node__handle logic-node__handle--input ${
+                  data.inputStates[portId] ? 'logic-node__handle--active' : ''
+                }`}
+              />
+            </Fragment>
           ))}
         </div>
         <div className="logic-node__ports-col logic-node__ports-col--outputs">
-          {data.outputs.map((portId) => (
-            <Handle
-              key={portId}
-              id={portId}
-              type="source"
-              position={Position.Right}
-              style={outputStyle(data.outputs.indexOf(portId))}
-              className={`logic-node__handle logic-node__handle--output ${
-                data.outputStates[portId] ? 'logic-node__handle--active' : ''
-              }`}
-            />
+          {data.outputs.map((portId, idx) => (
+            <Fragment key={portId}>
+              {data.portLabels?.[portId] ? (
+                <div className="logic-node__port-label logic-node__port-label--output" style={outputStyle(idx)}>
+                  {data.portLabels[portId]}
+                </div>
+              ) : null}
+              <Handle
+                id={portId}
+                type="source"
+                position={Position.Right}
+                style={outputStyle(idx)}
+                className={`logic-node__handle logic-node__handle--output ${
+                  data.outputStates[portId] ? 'logic-node__handle--active' : ''
+                }`}
+              />
+            </Fragment>
           ))}
         </div>
       </div>

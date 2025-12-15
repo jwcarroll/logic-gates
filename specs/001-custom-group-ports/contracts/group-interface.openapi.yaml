@@ -14,7 +14,7 @@ paths:
     post:
       tags: [groups]
       summary: Create a group from selected nodes
-      operationId: groupNodes
+      operationId: createGroup
       requestBody:
         required: true
         content:
@@ -38,7 +38,7 @@ paths:
     put:
       tags: [groups]
       summary: Replace a group's explicit external interface
-      operationId: setGroupInterface
+      operationId: updateGroupInterface
       parameters:
         - name: groupId
           in: path
@@ -52,7 +52,7 @@ paths:
               $ref: '#/components/schemas/SetGroupInterfaceRequest'
       responses:
         '200':
-          description: Interface updated; includes diff for adapters
+          description: Interface updated; adapters must rewire (all existing wires are disconnected)
           content:
             application/json:
               schema:
@@ -67,7 +67,7 @@ components:
   schemas:
     GroupNodesRequest:
       type: object
-      required: [nodeIds, label]
+      required: [nodeIds, label, interfaceDraft]
       properties:
         nodeIds:
           type: array
@@ -79,7 +79,7 @@ components:
         collapsed:
           type: boolean
           default: false
-        interface:
+        interfaceDraft:
           $ref: '#/components/schemas/GroupInterface'
     GroupNodesResponse:
       type: object
@@ -96,20 +96,18 @@ components:
           $ref: '#/components/schemas/GroupInterface'
     SetGroupInterfaceResponse:
       type: object
-      required: [ok, circuit, diff]
+      required: [ok, circuit, disconnectedWireIds]
       properties:
         ok: { type: boolean, const: true }
         circuit:
           $ref: '#/components/schemas/Circuit'
-        diff:
-          $ref: '#/components/schemas/GroupInterfaceDiff'
+        disconnectedWireIds:
+          type: array
+          items: { type: string }
     GroupInterface:
       type: object
-      required: [inputs, outputs, revision]
+      required: [inputs, outputs]
       properties:
-        revision:
-          type: integer
-          minimum: 0
         inputs:
           type: array
           items: { $ref: '#/components/schemas/ExposedPort' }
@@ -118,40 +116,23 @@ components:
           items: { $ref: '#/components/schemas/ExposedPort' }
     ExposedPort:
       type: object
-      required: [id, name, internalPortId]
+      required: [id, kind, name, mapsToInternalPortId]
       properties:
         id:
           type: string
           description: Group port id (globally unique across circuit)
+        kind:
+          type: string
+          enum: [input, output]
         name:
           type: string
           minLength: 1
-        internalPortId:
+        mapsToInternalPortId:
           type: string
           description: >
             Internal port endpoint represented by this exposed port. Contract rule:
-            MUST reference a junction port inside the group (inputs map to interface-input junction outputs;
-            outputs map to interface-output junction inputs).
-    GroupInterfaceDiff:
-      type: object
-      required: [addedPortIds, removedPortIds, keptPortIds, disconnectedWireIds, mappingChangedPortIds]
-      properties:
-        addedPortIds:
-          type: array
-          items: { type: string }
-        removedPortIds:
-          type: array
-          items: { type: string }
-        keptPortIds:
-          type: array
-          items: { type: string }
-        disconnectedWireIds:
-          type: array
-          items: { type: string }
-        mappingChangedPortIds:
-          type: array
-          items: { type: string }
-          description: Ports whose id was kept but internalPortId changed (warn user)
+            MUST reference a junction port inside the group (Option A mapping convention:
+            exposed inputs map to junction output ports; exposed outputs map to junction input ports).
     ErrorResponse:
       type: object
       required: [ok, errors]

@@ -16,6 +16,9 @@ test.describe('[US3] group drill-in', () => {
       const b = nodes.find((n: any) => n.type === 'gate' && n.data.gateType === 'XOR')
       store.selectNodes([a.id, b.id])
       store.groupSelection('My Group', [a.id, b.id])
+
+      const confirm = store.confirmGroupInterfaceDraft()
+      if (!confirm.ok) throw new Error(`Confirm group failed: ${(confirm.errors || []).join(', ')}`)
     })
 
     const groupNode = page.locator('.logic-node', { hasText: 'My Group' })
@@ -34,15 +37,16 @@ test.describe('[US3] group drill-in', () => {
       const group = state.circuit.nodes.find((n: any) => n.type === 'group' && n.id === groupId)
       const childIds = group.data.childNodeIds
       const nodes = state.circuit.nodes
-      const a = nodes.find((n: any) => n.id === childIds[0])
-      const b = nodes.find((n: any) => n.id === childIds[1])
-      const ok = state.connectWire({
-        source: a.id,
-        target: b.id,
-        sourceHandle: a.data.outputPortId,
-        targetHandle: b.data.inputPortIds[0],
-      })
-      if (!ok) throw new Error('Failed to connect internal wire')
+      const children = nodes.filter((n: any) => childIds.includes(n.id))
+      const gate = children.find((n: any) => n.type === 'gate')
+      if (!gate) throw new Error('Expected a gate node inside the group')
+      state.moveNodes([
+        {
+          id: gate.id,
+          type: 'position',
+          position: { x: gate.position.x + 20, y: gate.position.y + 20 },
+        },
+      ])
     })
 
     await page.getByRole('button', { name: /back/i }).click()
@@ -55,4 +59,3 @@ test.describe('[US3] group drill-in', () => {
     await expect(page.locator('.logic-node', { hasText: 'My Group' })).toBeVisible()
   })
 })
-

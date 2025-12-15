@@ -35,8 +35,7 @@ describe('Pino adapter bindings', () => {
     const { entries, consoleLike } = makeConsole()
     const adapter = createPinoAdapter({
       // missing version/environment should trigger fallback
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      baseBindings: {} as any,
+      baseBindings: {},
       consoleLike,
     })
 

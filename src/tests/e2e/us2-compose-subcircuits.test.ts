@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { useAppStore } from '../../app/store'
 
-function findGroupPort(groupId: string, internalPortId: string) {
+function findExposedPortId(groupId: string, name: string) {
   const group = useAppStore.getState().circuit.nodes.find((n) => n.id === groupId && n.type === 'group')
   if (!group || group.type !== 'group') throw new Error('Group not found')
-  const entry = Object.entries(group.data.portMap.inputs).find(([, port]) => port === internalPortId)
-  if (entry) return entry[0]
-  const outEntry = Object.entries(group.data.portMap.outputs).find(([, port]) => port === internalPortId)
-  if (outEntry) return outEntry[0]
-  throw new Error('Port mapping missing')
+  const match = [...group.data.interface.inputs, ...group.data.interface.outputs].find((p) => p.name === name)
+  if (!match) throw new Error(`Exposed port not found: ${name}`)
+  return match.id
 }
 
 describe('US2 compose grouped subcircuits', () => {
@@ -33,21 +31,11 @@ describe('US2 compose grouped subcircuits', () => {
     const switches = state.circuit.nodes.filter((n) => n.type === 'switch')
     const lights = state.circuit.nodes.filter((n) => n.type === 'light')
 
-    // map group ports
-    const xorNode = state.circuit.nodes.find(
-      (n): n is typeof n & { type: 'gate' } =>
-        n.type === 'gate' && n.groupId === activeGroup.id && n.data.gateType === 'XOR',
-    )!
-    const andNode = state.circuit.nodes.find(
-      (n): n is typeof n & { type: 'gate' } =>
-        n.type === 'gate' && n.groupId === activeGroup.id && n.data.gateType === 'AND',
-    )!
-    const groupInputA = findGroupPort(activeGroup.id, xorNode.data.inputPortIds[0])
-    const groupInputB = findGroupPort(activeGroup.id, xorNode.data.inputPortIds[1])
-    const groupCarryInputA = findGroupPort(activeGroup.id, andNode.data.inputPortIds[0])
-    const groupCarryInputB = findGroupPort(activeGroup.id, andNode.data.inputPortIds[1])
-    const groupSumOutput = findGroupPort(activeGroup.id, xorNode.data.outputPortId)
-    const groupCarryOutput = findGroupPort(activeGroup.id, andNode.data.outputPortId)
+    // map group ports (explicit interface)
+    const groupInputA = findExposedPortId(activeGroup.id, 'A')
+    const groupInputB = findExposedPortId(activeGroup.id, 'B')
+    const groupSumOutput = findExposedPortId(activeGroup.id, 'SUM')
+    const groupCarryOutput = findExposedPortId(activeGroup.id, 'CARRY')
 
     const connect = useAppStore.getState().connectWire
     connect({
@@ -61,18 +49,6 @@ describe('US2 compose grouped subcircuits', () => {
       target: activeGroup.id,
       sourceHandle: switches[1].data.outputPortId,
       targetHandle: groupInputB,
-    })
-    connect({
-      source: switches[0].id,
-      target: activeGroup.id,
-      sourceHandle: switches[0].data.outputPortId,
-      targetHandle: groupCarryInputA,
-    })
-    connect({
-      source: switches[1].id,
-      target: activeGroup.id,
-      sourceHandle: switches[1].data.outputPortId,
-      targetHandle: groupCarryInputB,
     })
 
     connect({

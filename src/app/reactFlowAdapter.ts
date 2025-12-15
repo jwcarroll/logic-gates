@@ -10,6 +10,7 @@ type LogicNodeData = {
   gateType?: string
   switchState?: boolean
   lightState?: boolean
+  portLabels?: Record<string, string>
   inputStates: Record<string, boolean | undefined>
   outputStates: Record<string, boolean | undefined>
   onToggle?: () => void
@@ -104,10 +105,20 @@ function toLogicNodeData(
         label: node.data.label,
         meta: node.data.collapsed ? 'Collapsed' : 'Expanded',
         kind: 'group',
-        inputs: node.data.inputPortIds,
-        outputs: node.data.outputPortIds,
-        inputStates: toStateMap(node.data.inputPortIds, outputs),
-        outputStates: toStateMap(node.data.outputPortIds, outputs),
+        inputs: node.data.interface.inputs.map((p) => p.id),
+        outputs: node.data.interface.outputs.map((p) => p.id),
+        portLabels: Object.fromEntries([...node.data.interface.inputs, ...node.data.interface.outputs].map((p) => [p.id, p.name])),
+        inputStates: toStateMap(node.data.interface.inputs.map((p) => p.id), outputs),
+        outputStates: toStateMap(node.data.interface.outputs.map((p) => p.id), outputs),
+      }
+    case 'junction':
+      return {
+        label: node.data.label ?? 'Junction',
+        kind: 'junction',
+        inputs: [node.data.inputPortId],
+        outputs: [node.data.outputPortId],
+        inputStates: { [node.data.inputPortId]: resolveState(node.data.inputPortId, outputs) },
+        outputStates: { [node.data.outputPortId]: outputs[node.data.outputPortId] },
       }
     default:
       return {

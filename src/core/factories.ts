@@ -1,8 +1,10 @@
 import { makeId } from './ids'
-import type { GateNode, GateType, LightNode, Position, SwitchNode } from './types'
+import type { GateNode, GateType, JunctionNode, LightNode, Position, SwitchNode } from './types'
 
 const DEFAULT_WIDTH = 140
 const DEFAULT_HEIGHT = 80
+const JUNCTION_WIDTH = 60
+const JUNCTION_HEIGHT = 40
 
 export function createSwitchNode(position: Position): SwitchNode {
   const id = makeId('switch')
@@ -52,6 +54,24 @@ export function createGateNode(gateType: GateType, position: Position): GateNode
     data: {
       gateType,
       inputPortIds,
+      outputPortId,
+    },
+  }
+}
+
+export function createJunctionNode(position: Position, data?: { label?: string }): JunctionNode {
+  const id = makeId('junction')
+  const inputPortId = makeId('port-in')
+  const outputPortId = makeId('port-out')
+  return {
+    id,
+    type: 'junction',
+    position,
+    width: JUNCTION_WIDTH,
+    height: JUNCTION_HEIGHT,
+    data: {
+      label: data?.label,
+      inputPortId,
       outputPortId,
     },
   }

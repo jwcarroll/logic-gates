@@ -18,7 +18,8 @@ This quickstart explains how the *feature is intended to behave* once implemente
 4. In the interface editor:
    - Add/remove exposed inputs/outputs.
    - Name ports (e.g., `A`, `B`, `SUM`, `CARRY`) and order them.
-   - Map each exposed port to an internal junction connection point (auto-created by default).
+   - Map each exposed port to an internal port on the selected nodes (e.g., a gate input/output).
+     (The core will auto-create internal `junction` nodes to anchor the interface.)
 5. Confirm to create the group.
 
 Expected result:
@@ -31,12 +32,12 @@ Expected result:
 1. Select a group that already has wires connected to its exposed ports.
 2. Open “Edit interface”.
 3. Make any interface change (rename/reorder/add/remove/remap).
-4. Confirm the warning that existing connections will be removed.
+4. Click “Update interface”, then confirm the warning that existing connections will be removed.
 
 Expected result:
 
 - All external wires connected to that group’s exposed ports are disconnected.
-- Undo restores the previous interface and wiring.
+- Undo (Ctrl/Cmd+Z) restores the previous interface and wiring.
 
 ## Import/export behavior
 
@@ -47,4 +48,3 @@ Expected result:
 
 - Core command contracts: `/home/jwcarroll/dev/logic-gates/specs/001-custom-group-ports/contracts/core-commands.openapi.yaml`
 - Circuit export schema: `/home/jwcarroll/dev/logic-gates/specs/001-custom-group-ports/contracts/circuit-v1.2.schema.json`
-
