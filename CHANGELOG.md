@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/jwcarroll/logic-gates/compare/v1.2.3...v1.3.0) (2025-12-15)
+
+
+### Features
+
+* **groups:** custom ports on groups ([#33](https://github.com/jwcarroll/logic-gates/issues/33)) ([68ae9a8](https://github.com/jwcarroll/logic-gates/commit/68ae9a85347d3279753ebc6c76a65b4b394432c0))
+
 ## [1.2.3](https://github.com/jwcarroll/logic-gates/compare/v1.2.2...v1.2.3) (2025-12-14)
 
 
