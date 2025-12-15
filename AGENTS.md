@@ -36,7 +36,7 @@
 - Aim for logic-heavy code in `src/core/` to be covered; prefer deterministic, pure tests.
 
 ## Commit & PR Expectations
-- Write concise, imperative commit subjects (e.g., `Add XOR gate validation`); keep body for rationale/links.
+- When asked to commit, use Conventional Commits (e.g., `feat: ...`, `fix: ...`, `chore: ...`) with an imperative subject after the colon.
 - Before opening a PR: run `npm run lint` and `npm run test`.
 - PRs should describe user-visible changes, testing performed, and reference issues/linear tickets; add screenshots/GIFs for UI updates.
 

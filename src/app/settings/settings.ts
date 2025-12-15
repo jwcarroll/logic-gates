@@ -15,11 +15,11 @@ export class SettingsError extends Error {
 const ASCII_PATTERN = /^[\x20-\x7E]+$/
 
 export function loadSettings(env: Record<string, string | undefined> = import.meta.env): AppSettings {
-  const version = env.VITE_APP_VERSION
-  const environment = env.VITE_APP_ENVIRONMENT
+  const version = __APP_VERSION__
+  const environment = env.VITE_APP_ENVIRONMENT ?? env.MODE
 
   if (!version || version.trim() === '') {
-    throw new SettingsError('MissingVersion: VITE_APP_VERSION is required')
+    throw new SettingsError('MissingVersion: build-time app version is required')
   }
   if (!ASCII_PATTERN.test(version)) {
     throw new SettingsError('InvalidVersionFormat: version must be ASCII and non-empty')
