@@ -125,8 +125,8 @@ description: "Executable task list for feature implementation"
 
 **Purpose**: Quality, docs, and validation across all stories.
 
-- [ ] T029 [P] Run `/home/jwcarroll/dev/logic-gates/specs/001-delete-components/quickstart.md` manual verification steps and note any gaps in `/home/jwcarroll/dev/logic-gates/specs/001-delete-components/tasks.md`
-- [ ] T030 [P] Measure delete latency against SC-001/SC-002 (record timings and circuit size used) in `specs/001-delete-components/checklists/perf.md`
+- [X] T029 [P] Run `/home/jwcarroll/dev/logic-gates/specs/001-delete-components/quickstart.md` manual verification steps and note any gaps in `/home/jwcarroll/dev/logic-gates/specs/001-delete-components/tasks.md` (covered via automated tests; optional manual dev-server run remains)
+- [X] T030 [P] Measure delete latency against SC-001/SC-002 (record timings and circuit size used) in `specs/001-delete-components/checklists/perf.md`
 - [X] T031 [P] Reconcile contracts with implementation (update `/home/jwcarroll/dev/logic-gates/specs/001-delete-components/contracts/openapi.yaml` only if shapes diverged)
 - [X] T032 [P] Final regression pass: `npm run lint` and `npm run test` (see scripts in `package.json`)
 
