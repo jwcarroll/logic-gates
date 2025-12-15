@@ -16,6 +16,24 @@ describe('[US3] group open/close sync', () => {
     const grouped = store.groupSelection('My Group', [a.id, b.id])
     expect(grouped.ok).toBe(true)
 
+    const currentDraft = useAppStore.getState().groupInterfaceDraft
+    expect(currentDraft).not.toBeNull()
+    useAppStore.setState({
+      groupInterfaceDraft: currentDraft
+        ? {
+            ...currentDraft,
+            interfaceDraft: {
+              inputs: [],
+              outputs: [{ id: 'out-y', kind: 'output', name: 'Y', mapsToInternalPortId: a.data.outputPortId }],
+            },
+            errors: [],
+          }
+        : null,
+    })
+
+    const confirm = store.confirmGroupInterfaceDraft()
+    expect(confirm.ok).toBe(true)
+
     const groupNode = useAppStore.getState().circuit.nodes.find((n) => n.type === 'group')!
     store.openGroup(groupNode.id)
     expect(useAppStore.getState().openGroupId).toBe(groupNode.id)
@@ -42,4 +60,3 @@ describe('[US3] group open/close sync', () => {
     expect(wires.some((w) => w.sourceNode === childA.id && w.targetNode === childB.id)).toBe(true)
   })
 })
-

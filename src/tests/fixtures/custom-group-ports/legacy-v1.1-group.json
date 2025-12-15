@@ -1,0 +1,67 @@
+{
+  "version": "1.1",
+  "circuit": {
+    "id": "legacy-group-v1.1-no-interface",
+    "nodes": [
+      {
+        "id": "switch-a",
+        "type": "switch",
+        "position": { "x": 80, "y": 120 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "outputPortId": "port-switch-a", "label": "A" }
+      },
+      {
+        "id": "group-1",
+        "type": "group",
+        "position": { "x": 320, "y": 140 },
+        "width": 220,
+        "height": 160,
+        "data": {
+          "label": "Legacy Group",
+          "childNodeIds": ["switch-b", "and-1"],
+          "inputPortIds": ["group-in-0"],
+          "outputPortIds": ["group-out-0"],
+          "collapsed": true,
+          "portMap": {
+            "inputs": { "group-in-0": "and-in-0" },
+            "outputs": { "group-out-0": "and-out" }
+          }
+        }
+      },
+      {
+        "id": "switch-b",
+        "type": "switch",
+        "position": { "x": 360, "y": 220 },
+        "width": 140,
+        "height": 80,
+        "groupId": "group-1",
+        "data": { "state": false, "outputPortId": "port-switch-b", "label": "B" }
+      },
+      {
+        "id": "and-1",
+        "type": "gate",
+        "position": { "x": 520, "y": 200 },
+        "width": 140,
+        "height": 80,
+        "groupId": "group-1",
+        "data": { "gateType": "AND", "inputPortIds": ["and-in-0", "and-in-1"], "outputPortId": "and-out" }
+      },
+      {
+        "id": "light-out",
+        "type": "light",
+        "position": { "x": 600, "y": 140 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "inputPortId": "port-light-in" }
+      }
+    ],
+    "wires": [
+      { "id": "wire-a-to-group", "source": "port-switch-a", "sourceNode": "switch-a", "target": "group-in-0", "targetNode": "group-1" },
+      { "id": "wire-b-to-and", "source": "port-switch-b", "sourceNode": "switch-b", "target": "and-in-1", "targetNode": "and-1" },
+      { "id": "wire-group-to-out", "source": "group-out-0", "sourceNode": "group-1", "target": "port-light-in", "targetNode": "light-out" }
+    ]
+  },
+  "metadata": { "name": "Legacy group export (v1.1)", "createdAt": "2025-01-01T00:00:00Z" }
+}
+

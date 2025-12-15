@@ -49,12 +49,15 @@ describe('Grouping UI', () => {
     const result = useAppStore.getState().groupSelection('Group', nodeIds)
     expect(result.ok).toBe(true)
 
+    const confirm = useAppStore.getState().confirmGroupInterfaceDraft()
+    expect(confirm.ok).toBe(true)
+
     const afterGroup = useAppStore.getState()
     const groups = afterGroup.circuit.nodes.filter((n) => n.type === 'group')
     expect(groups).toHaveLength(1)
     const group = groups[0]
-    expect(group.data.inputPortIds.length).toBeGreaterThan(0)
-    expect(group.data.outputPortIds.length).toBeGreaterThan(0)
+    expect(group.data.interface.inputs.length).toBeGreaterThan(0)
+    expect(group.data.interface.outputs.length).toBeGreaterThan(0)
 
     await act(async () => {
       useAppStore.getState().selectNodes([group.id])
@@ -74,6 +77,6 @@ describe('Grouping UI', () => {
     const circuit = useAppStore.getState().circuit
     const halfAdder = circuit.nodes.find((n) => n.type === 'group' && n.data.label === 'Half Adder')
     expect(halfAdder).toBeDefined()
-    expect((halfAdder as any).data.outputPortIds.length).toBeGreaterThan(0)
+    expect((halfAdder as any).data.interface.outputs.length).toBeGreaterThan(0)
   })
 })

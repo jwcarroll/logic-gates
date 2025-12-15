@@ -5,6 +5,7 @@ import { WorkspaceCanvas } from './WorkspaceCanvas'
 import { useGroupView } from '../app/hooks/useGroupView'
 import { GroupDrillInOverlay } from './components/GroupDrillInOverlay'
 import { GroupStatusBanner } from './components/GroupStatusBanner'
+import { useAppStore } from '../app/store'
 
 const anchors = [
   { id: 'primary-toolbar', position: 'top-right' as const, offset: { x: 16, y: 16 }, label: 'Workspace tools' },
@@ -18,6 +19,9 @@ export function WorkspaceShell() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [viewport, setViewport] = useState<Viewport>({ width: 1440, height: 900 })
   const groupView = useGroupView()
+  const notice = useAppStore((s) => s.notice)
+  const undo = useAppStore((s) => s.undo)
+  const redo = useAppStore((s) => s.redo)
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -49,6 +53,31 @@ export function WorkspaceShell() {
     return () => window.removeEventListener('resize', handler)
   }, [])
 
+  useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!target || !(target instanceof HTMLElement)) return false
+      const tag = target.tagName.toLowerCase()
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || target.isContentEditable
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target)) return
+      const key = event.key.toLowerCase()
+      const mod = event.metaKey || event.ctrlKey
+      if (!mod) return
+      if (key !== 'z') return
+      event.preventDefault()
+      if (event.shiftKey) {
+        redo()
+      } else {
+        undo()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [undo, redo])
+
   const selectionBox = null // placeholder until selection bounds are available
 
   return (
@@ -67,7 +96,7 @@ export function WorkspaceShell() {
               </div>
             )
           ) : anchor.id === 'status-banner' ? (
-            <GroupStatusBanner status={groupView.status} isOpen={groupView.isOpen} />
+            <GroupStatusBanner status={groupView.status} isOpen={groupView.isOpen} notice={notice} />
           ) : (
             <div className="floating-anchor__inner">
               <span className="floating-anchor__label">{anchor.label}</span>

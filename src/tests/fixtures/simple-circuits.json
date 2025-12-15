@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.2",
   "circuit": {
     "nodes": [
       { "id": "s1", "type": "switch", "position": { "x": 0, "y": 0 }, "width": 140, "height": 80, "data": { "state": true, "outputPortId": "p1", "label": "Switch" } },

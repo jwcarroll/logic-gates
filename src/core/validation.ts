@@ -21,12 +21,15 @@ function findPort(node: CircuitNode, portId: string): Port | null {
       return null
     }
     case 'group': {
-      if (node.data.outputPortIds.includes(portId)) {
-        return { id: portId, nodeId: node.id, kind: 'output', index: node.data.outputPortIds.indexOf(portId) }
-      }
-      if (node.data.inputPortIds.includes(portId)) {
-        return { id: portId, nodeId: node.id, kind: 'input', index: node.data.inputPortIds.indexOf(portId) }
-      }
+      const outIdx = node.data.interface.outputs.findIndex((p) => p.id === portId)
+      if (outIdx >= 0) return { id: portId, nodeId: node.id, kind: 'output', index: outIdx }
+      const inIdx = node.data.interface.inputs.findIndex((p) => p.id === portId)
+      if (inIdx >= 0) return { id: portId, nodeId: node.id, kind: 'input', index: inIdx }
+      return null
+    }
+    case 'junction': {
+      if (node.data.outputPortId === portId) return { id: portId, nodeId: node.id, kind: 'output', index: 0 }
+      if (node.data.inputPortId === portId) return { id: portId, nodeId: node.id, kind: 'input', index: 0 }
       return null
     }
     default:

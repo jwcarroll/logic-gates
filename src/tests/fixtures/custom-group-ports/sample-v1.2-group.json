@@ -1,0 +1,79 @@
+{
+  "version": "1.2",
+  "circuit": {
+    "id": "sample-group-v1.2-with-interface",
+    "nodes": [
+      {
+        "id": "switch-a",
+        "type": "switch",
+        "position": { "x": 80, "y": 120 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "outputPortId": "port-switch-a", "label": "A" }
+      },
+      {
+        "id": "group-1",
+        "type": "group",
+        "position": { "x": 320, "y": 120 },
+        "width": 260,
+        "height": 200,
+        "data": {
+          "label": "v1.2 Group",
+          "childNodeIds": ["j-in-a", "j-out", "not-1"],
+          "collapsed": true,
+          "interface": {
+            "inputs": [{ "id": "group-in-a", "kind": "input", "name": "A", "mapsToInternalPortId": "j-in-a-out" }],
+            "outputs": [{ "id": "group-out-y", "kind": "output", "name": "Y", "mapsToInternalPortId": "j-out-in" }]
+          },
+          "portMap": {
+            "inputs": { "group-in-a": "j-in-a-out" },
+            "outputs": { "group-out-y": "j-out-in" }
+          }
+        }
+      },
+      {
+        "id": "j-in-a",
+        "type": "junction",
+        "position": { "x": 360, "y": 220 },
+        "width": 60,
+        "height": 40,
+        "groupId": "group-1",
+        "data": { "label": "A", "inputPortId": "j-in-a-in", "outputPortId": "j-in-a-out" }
+      },
+      {
+        "id": "not-1",
+        "type": "gate",
+        "position": { "x": 460, "y": 220 },
+        "width": 140,
+        "height": 80,
+        "groupId": "group-1",
+        "data": { "gateType": "NOT", "inputPortIds": ["not-in-0"], "outputPortId": "not-out" }
+      },
+      {
+        "id": "j-out",
+        "type": "junction",
+        "position": { "x": 620, "y": 220 },
+        "width": 60,
+        "height": 40,
+        "groupId": "group-1",
+        "data": { "label": "Y", "inputPortId": "j-out-in", "outputPortId": "j-out-out" }
+      },
+      {
+        "id": "light-out",
+        "type": "light",
+        "position": { "x": 640, "y": 120 },
+        "width": 140,
+        "height": 80,
+        "data": { "state": false, "inputPortId": "port-light-in" }
+      }
+    ],
+    "wires": [
+      { "id": "wire-a-to-group", "source": "port-switch-a", "sourceNode": "switch-a", "target": "group-in-a", "targetNode": "group-1" },
+      { "id": "wire-j-in-to-not", "source": "j-in-a-out", "sourceNode": "j-in-a", "target": "not-in-0", "targetNode": "not-1" },
+      { "id": "wire-not-to-j-out", "source": "not-out", "sourceNode": "not-1", "target": "j-out-in", "targetNode": "j-out" },
+      { "id": "wire-group-to-out", "source": "group-out-y", "sourceNode": "group-1", "target": "port-light-in", "targetNode": "light-out" }
+    ]
+  },
+  "metadata": { "name": "Group export (v1.2)", "createdAt": "2025-12-14T00:00:00Z" }
+}
+

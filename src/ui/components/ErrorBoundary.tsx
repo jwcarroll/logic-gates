@@ -19,11 +19,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Log for Playwright capture and debugging
-    // eslint-disable-next-line no-console
     console.error('App crashed', error, info?.componentStack)
     try {
       // Surface stack in global for automated grabs
-      ;(window as any).__LAST_ERROR__ = { message: error?.message, stack: error?.stack, componentStack: info?.componentStack }
+      ;(window as Window & { __LAST_ERROR__?: { message?: string; stack?: string; componentStack?: string } }).__LAST_ERROR__ = {
+        message: error?.message,
+        stack: error?.stack,
+        componentStack: info?.componentStack ?? undefined,
+      }
     } catch {
       /* ignore */
     }

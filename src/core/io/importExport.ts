@@ -2,7 +2,7 @@ import type { Circuit, Result } from '../types'
 import type { CircuitExport, CircuitSchemaVersion } from './schema'
 import { validateCircuitImport } from './schema'
 
-const DEFAULT_VERSION: CircuitSchemaVersion = '1.1'
+const DEFAULT_VERSION: CircuitSchemaVersion = '1.2'
 
 /**
  * Prepare a circuit export payload with schema version metadata.

@@ -42,10 +42,13 @@ risk and keeps the simulation trustworthy.
 
 ### Explicit Invariants & Validation
 Graph validity (direction output→input, one wire per input, no self-loops), simulation
-convergence bounds (≤100 iterations), and import/export schemas (v1.0 with v1.1 metadata)
+convergence bounds (≤100 iterations), and import/export schemas (versioned and validated)
 MUST be encoded as invariants. Invalid operations reject without mutating state. Specs
-record the invariants, and code asserts them at boundaries. Rationale: makes failure modes
-obvious and debuggable.
+record the invariants, and code asserts them at boundaries with user-understandable errors.
+Schema changes MUST explicitly declare one of: (1) backward-compatible validation, (2)
+migration on import, or (3) hard-rejection of legacy versions; any hard-rejection MUST be
+intentional, documented in the relevant spec/plan, and covered by fixtures/tests. Rationale:
+makes failure modes obvious and debuggable.
 
 ### Extensibility & Plugin Surfaces
 Plugin-friendly surfaces for nodes, commands, menus, and metadata MUST remain stable.
@@ -62,8 +65,8 @@ preserves the ability to add new node types and commands without rewriting the c
   styling tokens and global themes; tests in `src/tests`.
 - Core APIs expose pure commands and deterministic simulation; UI layers derive state from
   store queries and never mutate core data directly.
-- Import/export must honor schema compatibility (v1.0 + forward-compatible v1.1 metadata);
-  new metadata requires validation and migration notes.
+- Import/export must honor the schema policy declared in specs/contracts; new versions
+  require validation + fixtures/tests, and breaking compatibility requires explicit notes.
 
 ## Development Workflow & Quality Gates
 
@@ -91,4 +94,4 @@ preserves the ability to add new node types and commands without rewriting the c
 - Runtime guidance (e.g., `REACT_FLOW_REBUILD_SPEC.md`) must be kept aligned with the
   principles and cited in relevant plans/specs.
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-09 | **Last Amended**: 2025-12-09
+**Version**: 2.0.0 | **Ratified**: 2025-12-09 | **Last Amended**: 2025-12-14

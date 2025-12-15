@@ -20,41 +20,43 @@ test.describe('US2 grouping real browser flow', () => {
       return { switches, lights, andGate }
     })
 
-    const { groupId, portMap } = await page.evaluate(({ andGate }) => {
+    const { groupId, inputs, outputs } = await page.evaluate(({ andGate }) => {
       const store = (window as any).__APP_STORE__
-      const result = store.getState().groupSelection('Group', [andGate.id])
-      if (!result.ok) {
-        throw new Error(`Grouping failed: ${result.errors?.join(', ')}`)
-      }
+      const start = store.getState().groupSelection('Group', [andGate.id])
+      if (!start.ok) throw new Error(`Grouping failed: ${start.errors?.join(', ')}`)
+      const confirm = store.getState().confirmGroupInterfaceDraft()
+      if (!confirm.ok) throw new Error(`Confirm failed: ${confirm.errors?.join(', ')}`)
       const group = store.getState().circuit.nodes.find((n: any) => n.type === 'group')
-      return { groupId: group.id, portMap: group.data.portMap }
+      return {
+        groupId: group.id,
+        inputs: group.data.interface.inputs.map((p: any) => p.id),
+        outputs: group.data.interface.outputs.map((p: any) => p.id),
+      }
     }, ids)
 
-    await page.evaluate(({ switches, lights, andGate, groupId, portMap }) => {
+    await page.evaluate(({ switches, lights, groupId, inputs, outputs }) => {
       const store = (window as any).__APP_STORE__
       const { connectWire } = store.getState()
-      const groupInputs = Object.keys(portMap.inputs)
-      const andOut = Object.entries(portMap.outputs).find(([, internal]) => internal === andGate.data.outputPortId)?.[0]
 
       connectWire({
         source: switches[0].id,
         target: groupId,
         sourceHandle: switches[0].port,
-        targetHandle: groupInputs[0],
+        targetHandle: inputs[0],
       })
       connectWire({
         source: switches[1].id,
         target: groupId,
         sourceHandle: switches[1].port,
-        targetHandle: groupInputs[1],
+        targetHandle: inputs[1],
       })
       connectWire({
         source: groupId,
         target: lights[0].id,
-        sourceHandle: andOut,
+        sourceHandle: outputs[0],
         targetHandle: lights[0].port,
       })
-    }, { ...ids, groupId, portMap })
+    }, { ...ids, groupId, inputs, outputs })
 
     await page.evaluate(({ switches }) => {
       const store = (window as any).__APP_STORE__
